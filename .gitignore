@@ -3,6 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# features an prompts
+
+features/
+prompts/
+
 # C extensions
 *.so
 

@@ -277,7 +277,13 @@ class IPRTab(ttk.Frame):
             elif "Darcy" in model:
                 q_res, p_res = IPRModels.darcy(self.get_float("k"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("re"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"))
             elif model == "Economides y Retnanto":
-                q_res, p_res = IPRModels.economides_retnanto(self.get_float("qmax"), self.get_float("pres"), self.get_float("pb"))
+                import warnings as _warnings
+                with _warnings.catch_warnings(record=True) as caught:
+                    _warnings.simplefilter("always", UserWarning)
+                    q_res, p_res = IPRModels.economides_retnanto(self.get_float("qmax"), self.get_float("pres"), self.get_float("pb"))
+                for w in caught:
+                    if issubclass(w.category, UserWarning):
+                        messagebox.showwarning("Economides–Retnanto — fuera de rango", str(w.message))
             elif model == "Vogel (Subsaturado)":
                 q_res, p_res = IPRModels.vogel_subsaturado(self.get_float("pres"), self.get_float("pb"), self.get_float("j_index"))
             elif model == "Brown":

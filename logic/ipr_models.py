@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 class IPRModels:
@@ -104,20 +106,54 @@ class IPRModels:
 
     @staticmethod
     def economides_retnanto(q_max, p_res, pb, steps=20):
+        """Correlación de Retnanto y Economides (1998) para IPR bifásico en pozos horizontales.
+
+        Ec. 3-33: qo/qo,max = 1 - 0.25*(Pwf/Pr) - 0.75*(Pwf/Pr)^n
+        Ec. 3-34: n = (-0.27 + 1.46*(Pr/Pb) - 0.96*(Pr/Pb)^2) * (4 + 1.66e-3*Pb)
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 21-24
+        (Tabla 3-3 y Figura 3-8 acotan el rango físico de n).
+
+        Emite ``warnings.UserWarning`` si los inputs caen fuera del rango
+        del modelo (Pr > Pb subsaturado, o n < 1).
+        """
         pwf_values = np.linspace(0, p_res, steps)
+
+        if pb <= 0 or p_res <= 0 or q_max <= 0:
+            warnings.warn(
+                "Economides–Retnanto requiere Pr, Pb y q_max estrictamente positivos.",
+                UserWarning, stacklevel=2,
+            )
+            return np.zeros(steps), pwf_values
+
+        ratio_rb = p_res / pb
+        n_param = (-0.27 + 1.46 * ratio_rb - 0.96 * (ratio_rb ** 2)) \
+                  * (4.0 + 1.66e-3 * pb)
+
+        if p_res > pb:
+            warnings.warn(
+                "Economides–Retnanto está formulado para reservorios saturados "
+                "(Pr ≤ Pb). El resultado puede no ser físico "
+                "(MODULO III, sec. 3.2.4).",
+                UserWarning, stacklevel=2,
+            )
+        if n_param < 1.0:
+            warnings.warn(
+                f"Economides–Retnanto: n = {n_param:.3f} < 1 — fuera del rango "
+                "de validez del modelo (Tabla 3-3 / Figura 3-8 del MODULO III).",
+                UserWarning, stacklevel=2,
+            )
+
         q_values = []
-        
-        # Calcular n en función de pb y p_res
-        if pb > 0:
-            ratio = p_res / pb
-            n_param = (-0.27 + 1.46 * ratio - 0.96 * (ratio**2)) * (4 + 1.66e-3 * pb)
-        else:
-            n_param = 1.0 # Default si pb no es válido
-            
         for pwf in pwf_values:
-            ratio = pwf / p_res if p_res > 0 else 0
-            q = q_max * (1 - 0.2 * ratio - 0.8 * (ratio ** n_param))
-            q_values.append(max(0, q))
+            r = pwf / p_res
+            # Evita 0**(n<0) = inf cuando la curva parte de Pwf = 0.
+            if n_param < 0 and r == 0.0:
+                r_n = 0.0
+            else:
+                r_n = r ** n_param
+            q = q_max * (1.0 - 0.25 * r - 0.75 * r_n)
+            q_values.append(max(0.0, q))
         return np.array(q_values), pwf_values
 
     @staticmethod
