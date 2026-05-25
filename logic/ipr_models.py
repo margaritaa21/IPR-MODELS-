@@ -12,11 +12,19 @@ class IPRModels:
 
     @staticmethod
     def darcy(k, h, mu, bo, re, rw, s, p_res, steps=20):
-        """
-        Método de Darcy (Flujo semi-estacionario).
-        Inputs: 
-        k (md), h (ft), mu (cp), bo (rb/stb), 
-        re (ft), rw (ft), s (adimensional), Pr (psi)
+        """Darcy radial — estado pseudo-estable (Pr constante).
+
+        Ec. 2-14 (MODULO II p. 9):
+            q = 0.00708·k·h·(P_R - P_wf) / [μ·B·(ln(0.472·re/rw) + s)]
+        Implementación equivalente: ln(0.472·re/rw) = ln(re/rw) + ln(0.472)
+        ≈ ln(re/rw) - 0.7507. Por convención de campo se aproxima como
+        ``ln(re/rw) - 0.75 + s``.
+
+        Inputs:
+            k (md), h (ft), μ (cp), Bo (rb/STB), re (ft), rw (ft),
+            s (skin adimensional), Pr (psi).
+
+        Ref: DOCS/MODULO II - DESEMPEÑO DEL YACIMIENTO_unlocked.pdf, pp. 8-9.
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
@@ -44,10 +52,14 @@ class IPRModels:
 
     @staticmethod
     def fetkovich(C, n, p_res, steps=20):
-        """
-        Método de Fetkovich.
-        Q = C * (Pr^2 - Pwf^2)^n
-        Inputs: C (coeficiente), n (exponente de turbulencia), Pr
+        """Fetkovich (1973) — IPR de pozos de gas / aceite con efecto de turbulencia.
+
+        Ec. 2-54 (MODULO II p. 56):
+            q = C · (Pr² - Pwf²)^n
+        ``n`` varía entre 0.5 y 1; ``C`` en unidades de campo Mscf/d/psi²ⁿ
+        (gas) o STB/d/psi²ⁿ (aceite).
+
+        Ref: DOCS/MODULO II - DESEMPEÑO DEL YACIMIENTO_unlocked.pdf, pp. 55-58.
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
@@ -62,8 +74,18 @@ class IPRModels:
 
     @staticmethod
     def wiggins(p_res, pb, j_index, steps=20):
-        """
-        Método de Wiggins adaptado para flujo subsaturado con Pb.
+        """Wiggins (1994) — IPR bifásico para crudos volátiles, generalizado a Pr > Pb.
+
+        - Tramo monofásico (Pwf ≥ Pb): q = J·(Pr - Pwf).
+        - Tramo bifásico (Pwf < Pb):   q = qb + (J·Pb/1.48)·(1 - 0.52·r - 0.48·r²),
+          con r = Pwf/Pb y qb = J·(Pr - Pb).
+
+        El qomax bifásico (J·Pb/1.48) y la pendiente continua en Pb se derivan
+        igualando dq/dPwf|_(Pwf=Pb) = -J (mismo procedimiento que Vogel-Sub).
+
+        Wiggins (1994) NO aparece en MODULO II ni MODULO III; referencia
+        original: Wiggins, M. L., *"Generalized Inflow Performance Relationships
+        for Three-Phase Flow"*, SPE Reservoir Engineering, Aug 1994.
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
@@ -133,6 +155,19 @@ class IPRModels:
 
     @staticmethod
     def vogel_subsaturado(p_res, pb, j_index, steps=20):
+        """Vogel generalizado para reservorios subsaturados (Pr ≥ Pb).
+
+        Ec. 2-35 (MODULO II p. 39):
+        - Pwf ≥ Pb (monofásico):  q = J·(Pr - Pwf).
+        - Pwf < Pb (bifásico):    q = qb + (J·Pb/1.8)·(1 - 0.2·(Pwf/Pb) - 0.8·(Pwf/Pb)²)
+          con qb = J·(Pr - Pb).
+
+        Caso saturado (Pr = Pb): qb = 0, formula colapsa al Vogel original
+        (Ec. 2-33 con qomax = J·Pb/1.8).
+
+        Ref: DOCS/MODULO II - DESEMPEÑO DEL YACIMIENTO_unlocked.pdf, pp. 33-40
+        (Ec. 2-33, 2-35).
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
         qb = j_index * (p_res - pb) if p_res > pb else 0
@@ -147,6 +182,19 @@ class IPRModels:
 
     @staticmethod
     def brown(q_max_o, p_res, w_cut, steps=20):
+        """Brown — IPR de aceite + agua con corte de agua constante.
+
+        Aceite por Vogel saturado: qo = q_max_o·(1 - 0.2·(Pwf/Pr) - 0.8·(Pwf/Pr)²).
+        Agua proporcional al corte: qw = (WC/(100-WC))·qo  → qt = qo + qw.
+
+        Asunción: el corte de agua se asume **constante** en toda la curva
+        (simplificación; en realidad WC varía con la presión). Para WC=20 %
+        cada punto cumple qt = qo·1.25.
+
+        Brown's Method no aparece en MODULO II ni MODULO III; modelo
+        propio del proyecto basado en la generalización clásica de Vogel
+        con WOR constante.
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
         for pwf in pwf_values:
