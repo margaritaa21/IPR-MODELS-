@@ -291,29 +291,140 @@ class IPRModels:
         return np.array(q_values), pwf_values
 
     @staticmethod
-    def vogel_kabir(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb, steps=20):
-        # Uses Joshi to compute single phase J, then uses Vogel to calculate 2-phase IPR.
-        pwf_values = np.linspace(0, p_res, steps)
-        q_values = []
+    def _pi_joshi(kh, kv, h, mu, bo, L, reh, rw, s):
+        """PI horizontal por Joshi 1991. Devuelve J en STB/d/psi o 0 si inputs inválidos."""
+        if mu <= 0 or bo <= 0 or L <= 0 or kh <= 0 or kv <= 0 or reh <= (L / 2.0):
+            return 0.0
         try:
-            # Single-phase productivity index via Joshi
-            iani = np.sqrt(kh / kv) if kv > 0 else 1.0
-            a = (L / 2) * np.sqrt(0.5 + np.sqrt(0.25 + (reh / (L / 2))**4))
-            term1 = np.log((a + np.sqrt(a**2 - (L/2)**2)) / (L/2))
+            iani = np.sqrt(kh / kv)
+            a = (L / 2.0) * np.sqrt(0.5 + np.sqrt(0.25 + (reh / (L / 2.0)) ** 4))
+            term1 = np.log((a + np.sqrt(a ** 2 - (L / 2.0) ** 2)) / (L / 2.0))
             term2 = (iani * h / L) * np.log((iani * h) / (rw * (iani + 1)))
             denom = mu * bo * (term1 + term2 + s)
-            j_index = (0.00708 * kh * h) / denom if denom > 0 else 0
-            
-            # Equation 3-41: qo,max = J * Pb / 1.8
-            qo_max = (j_index * pb) / 1.8
-        except:
-            qo_max = 0
-            
+            return (0.00708 * kh * h) / denom if denom > 0 else 0.0
+        except Exception:
+            return 0.0
+
+    @staticmethod
+    def _pi_helmy_wattenbarger(kx, ky, kz, h, a_res, b_res, L,
+                               rw, x_w, y_w, z_w, mu, bo):
+        """PI horizontal por Helmy & Wattenbarger 1998, condición de presión constante.
+
+        Implementa Ecs. 3-44 a 3-57 del MODULO III, pp. 26-28.
+        Devuelve J en STB/d/psi o 0 si inputs inválidos.
+        γ = 1.781 (parámetro de la formulación).
+        """
+        gamma = 1.781
+        if min(kx, ky, kz, h, a_res, b_res, L, rw, mu, bo) <= 0:
+            return 0.0
+        try:
+            # Ecs. 3-48 a 3-57: dimensiones equivalentes
+            k_eq = (kx * ky * kz) ** (1.0 / 3.0)
+            a_eq = a_res * np.sqrt(k_eq / ky)
+            b_eq = b_res * np.sqrt(k_eq / kx)
+            h_eq = h * np.sqrt(k_eq / kz)
+            L_eq = L * np.sqrt(k_eq / ky)
+            A_eq = a_eq * h_eq
+            rw_eq = (rw / 2.0) * ((kz / kx) ** 0.25 + (kx / kz) ** 0.25)
+            x_w_eq = x_w * np.sqrt(k_eq / kx)
+            y_w_eq = y_w * np.sqrt(k_eq / ky)
+            z_w_eq = z_w * np.sqrt(k_eq / kz)
+
+            xa = x_w_eq / a_eq
+            ah = a_eq / h_eq
+            zh = z_w_eq / h_eq
+            yb = y_w_eq / b_eq
+            Lb = L_eq / b_eq
+            ab = a_eq / b_eq
+
+            # Ec. 3-45: ln(C_ACP)
+            inner = 4.74 - 10.353 * xa ** 1.115 + 9.165 * xa ** 2.838
+            lnC_ACP = (
+                2.607
+                - inner * ah ** 1.011
+                + 1.810 * np.log(np.sin(np.pi * zh))
+                + 2.056 * np.log(ah)
+            )
+
+            # Ec. 3-47: AA (factor de forma para s_PCP)
+            num = (0.388
+                   - 1.278 * yb + 0.715 * yb ** 2
+                   + 1.278 * Lb - 1.215 * Lb ** 2)
+            den = (h_eq / a_eq) * ab ** 1.711
+            AA = num / den
+
+            # Ec. 3-46: s_PCP (skin por penetración parcial)
+            bL = b_eq / L_eq
+            s_PCP = (bL ** 1.233 - 1.0) * (
+                2.897 + 0.003 * lnC_ACP - 0.453 * np.log(h_eq / a_eq) + AA
+            )
+
+            # Ec. 3-44: J_CP
+            denom = 141.2 * mu * bo * (
+                0.5 * np.log(4.0 * A_eq / (gamma * rw_eq ** 2))
+                - 0.5 * lnC_ACP + s_PCP
+            )
+            return (k_eq * b_eq) / denom if denom > 0 else 0.0
+        except Exception:
+            return 0.0
+
+    @staticmethod
+    def vogel_kabir(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+                    pi_source="joshi",
+                    kx=None, ky=None, kz=None,
+                    a_res=None, b_res=None,
+                    x_w=None, y_w=None, z_w=None,
+                    steps=20):
+        """Vogel Modificado (Kabir 1992) para pozos horizontales con partición saturado/subsaturado.
+
+        - Si Pwf ≥ Pb (tramo monofásico): q = J·(Pr - Pwf)            (Ec. 3-43 análoga).
+        - Si Pwf < Pb (tramo bifásico):  q = qb + (J·Pb/1.8)·(1 - 0.2·r - 0.8·r²),
+          con r = Pwf/Pb, qb = J·(Pr - Pb)                            (Ecs. 3-30 y 3-41).
+
+        ``pi_source``:
+          * ``"joshi"`` (default): J por Joshi 1991 con kh, kv, L, reh, rw, s.
+          * ``"helmy"``: J por Helmy-Wattenbarger 1998 (Ecs. 3-44 a 3-57) — requiere
+            kx, ky, kz, a_res, b_res, x_w, y_w, z_w. Si alguno es None se infiere
+            del par horizontal: kx=ky=kh, kz=kv, a_res=b_res=2·reh, pozo centrado.
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 24-32
+        (secciones 3.2.5 y 3.2.6, Ec. 3-30, 3-41, 3-43, 3-44 a 3-57).
+        """
+        pwf_values = np.linspace(0, p_res, steps)
+        q_values = []
+
+        if pb <= 0 or p_res <= 0:
+            return np.zeros(steps), pwf_values
+
+        if pi_source == "helmy":
+            kx_ = kh if kx is None else kx
+            ky_ = kh if ky is None else ky
+            kz_ = kv if kz is None else kz
+            a_ = (2.0 * reh) if a_res is None else a_res
+            b_ = (2.0 * reh) if b_res is None else b_res
+            x_w_ = (b_ / 2.0) if x_w is None else x_w
+            y_w_ = (a_ / 2.0) if y_w is None else y_w
+            z_w_ = (h / 2.0) if z_w is None else z_w
+            j_index = IPRModels._pi_helmy_wattenbarger(
+                kx_, ky_, kz_, h, a_, b_, L, rw, x_w_, y_w_, z_w_, mu, bo
+            )
+        else:
+            j_index = IPRModels._pi_joshi(kh, kv, h, mu, bo, L, reh, rw, s)
+
+        if j_index <= 0:
+            return np.zeros(steps), pwf_values
+
+        qo_max_below_pb = (j_index * pb) / 1.8           # Ec. 3-41
+        qb = j_index * (p_res - pb) if p_res > pb else 0.0
+
         for pwf in pwf_values:
-            ratio = pwf / p_res if p_res > 0 else 0
-            # Vogel equation applied to horizontal well maximum flow
-            q = qo_max * (1 - 0.2 * ratio - 0.8 * (ratio ** 2))
-            q_values.append(max(0, q))
+            if pwf >= pb:
+                q = j_index * (p_res - pwf)              # tramo lineal monofásico
+            else:
+                r = pwf / pb
+                q = qb + qo_max_below_pb * (1.0 - 0.2 * r - 0.8 * r ** 2)
+            q_values.append(max(0.0, q))
+
         return np.array(q_values), pwf_values
 
     # Se eliminaron Economides Horizontal, Butler y Furui de los modelos horizontales
