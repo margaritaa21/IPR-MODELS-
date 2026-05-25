@@ -161,9 +161,21 @@ class IPRModels:
 
     @staticmethod
     def cheng(q_max, p_res, angle, steps=20):
+        """Cheng (1990) — IPR para pozo desviado u horizontal (sec. 3.2.3).
+
+        Ec. 3-32:  qo/qo,max = a0 + a1·(Pwf/Pr) - a2·(Pwf/Pr)²
+        con a0, a1, a2 interpolados de la Tabla 3-1 según el ángulo de
+        inclinación (0° = vertical, 90° = horizontal).
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 18-21
+        (Tabla 3-1). Nota: el ejemplo del PDF p. 34 contiene una incoherencia
+        interna (sustituye a1 con signo invertido y entrega un resultado
+        numérico no reproducible por la propia fórmula); esta implementación
+        respeta la Ec. 3-32 canónica con los signos de Tabla 3-1.
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
-        
+
         # Tabla 3-1: Constantes de Cheng
         angles = np.array([0, 15, 30, 45, 60, 75, 85, 90])
         a0_vals = np.array([1, 0.9998, 0.9969, 0.9946, 0.9926, 0.9915, 0.9915, 0.9885])
@@ -182,6 +194,18 @@ class IPRModels:
 
     @staticmethod
     def joshi(kh, kv, h, mu, bo, L, reh, rw, s, p_res, steps=20):
+        """Pozo horizontal monofásico — correlación de Joshi (1991).
+
+        Ec. 3-43 (forma para drenaje elíptico):
+            J = 0.00708·kh·h / [μ·B · (ln((a + √(a²-(L/2)²))/(L/2))
+                                       + (I_ani·h/L)·ln(I_ani·h/(rw·(I_ani+1))) + s)]
+        con a = (L/2)·√(0.5 + √(0.25 + (2·r_eH/L)⁴))  y  I_ani = √(kh/kv).
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 25-26.
+        Devuelve la recta IPR (q, Pwf). Para los inputs del ejemplo p. 30 entrega
+        J ≈ 15,26 STB/d/psi (Helmy-Wattenbarger en el PDF da 19,98; las dos
+        correlaciones difieren naturalmente — ver `_pi_helmy_wattenbarger`).
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
         try:
@@ -193,7 +217,7 @@ class IPRModels:
             j_index = (0.00708 * kh * h) / denom if denom > 0 else 0
         except Exception:
             j_index = 0
-            
+
         for pwf in pwf_values:
             q = j_index * (p_res - pwf)
             q_values.append(max(0, q))
@@ -201,6 +225,18 @@ class IPRModels:
 
     @staticmethod
     def babu_odeh(kx, ky, kz, h, a_res, b_res, mu, bo, L, rw, x_mid, y_0, z_0, s_res, p_res, steps=20):
+        """**EXPERIMENTAL** — Babu y Odeh (1989) para pozo horizontal en caja rectangular.
+
+        Implementación actual no reproduce el J esperado del ejemplo PDF p. 30
+        (entrega J ≈ 12,4 vs ≈ 19,98 de Helmy-Wattenbarger; gap ~38 %).
+        El factor de forma ln(C_H) y el skin de penetración parcial s_R están
+        bajo revisión — ver HU-007. Usar Vogel-Kabir (`pi_source="helmy"`) o
+        Joshi como referencias mientras tanto.
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES (referencia general
+        sec. 3.2.x); el PDF cita Babu & Odeh (1989) sin reproducir la fórmula
+        completa.
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
         try:
@@ -393,9 +429,19 @@ class IPRModels:
 
     @staticmethod
     def bendakhlia_aziz(q_max, p_res, rec_factor, steps=20):
+        """Bendakhlia y Aziz — IPR bifásico horizontal con factor de recobro.
+
+        Ec. 3-31:  qo/qo,max = [1 - V·(Pwf/Pr) - (1-V)·(Pwf/Pr)²]^n
+        V y n son funciones empíricas del factor de recobro (Fig. 3-6,
+        ajustadas por regresión polinómica al rango x ∈ [0, 0.14]).
+
+        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 16-19
+        (Ec. 3-31, Fig. 3-6). Para rec_factor=0.05 reproduce el ejemplo
+        PDF p. 33 con error < 1 % (q≈27 823 STB/d vs 27 580 STB/d).
+        """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
-        
+
         # Calcular n y V a partir del factor de recobro
         x = rec_factor
         n = 98.395 * (x**2) - 13.587 * x + 1.35
