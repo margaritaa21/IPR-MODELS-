@@ -77,31 +77,6 @@ class IPRModels:
             q_values.append(max(0, q))
         return np.array(q_values), pwf_values
 
-    @staticmethod
-    def joshi(kh, h, mu, bo, a, L, iani, rw, s, p_res, steps=20):
-        import math
-        pwf_values = np.linspace(0, p_res, steps)
-        q_values = []
-        
-        if mu <= 0 or bo <= 0 or L <= 0 or a <= (L/2):
-            return np.zeros(steps), pwf_values
-            
-        try:
-            term1 = math.log((a + math.sqrt(a**2 - (L/2)**2)) / (L/2))
-            term2 = (iani * h / L) * math.log((iani * h) / (rw * (iani + 1)))
-            denom = mu * bo * (term1 + term2 + s)
-            
-            if denom <= 0: denom = 1e-6
-            j_index = (0.00708 * kh * h) / denom
-        except Exception:
-            j_index = 0
-            
-        for pwf in pwf_values:
-            q = j_index * (p_res - pwf)
-            q_values.append(max(0, q))
-            
-        return np.array(q_values), pwf_values
-
     # ================= NUEVOS MODELOS VERTICALES =================
 
     @staticmethod
@@ -181,19 +156,6 @@ class IPRModels:
             qw = (w_cut / (100 - w_cut)) * qo if w_cut < 100 else 0
             q_values.append(max(0, qo + qw))
         return np.array(q_values), pwf_values
-
-    @staticmethod
-    def cheng(q_max, p_res, angle, steps=20):
-        pwf_values = np.linspace(0, p_res, steps)
-        q_values = []
-        import math
-        # Factores empíricos simplificados basados en inclinación
-        rad = math.radians(angle)
-        v1 = 0.2 * math.cos(rad)
-        v2 = 1.0 - v1
-        for pwf in pwf_values:
-            ratio = pwf / p_res
-    # Se eliminaron Couto y Xie Xingli de los modelos verticales
 
     # ================= NUEVOS MODELOS HORIZONTALES =================
 
