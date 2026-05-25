@@ -299,16 +299,9 @@ class IPRTab(ttk.Frame):
             elif model == "Bendakhlia y Aziz":
                 q_res, p_res = IPRModels.bendakhlia_aziz(self.get_float("qmax"), self.get_float("pres"), self.get_float("rec_factor"))
 
-            # Graficar
-            color_map = {
-                "Vogel": "#2ECC71", 
-                "Fetkovich": "#E74C3C", 
-                "Wiggins": "#9B59B6", 
-                "Darcy (Semi-Estacionario)": "#3498DB",
-                "Joshi Horizontal": "#F39C12",
-                "Bendakhlia y Aziz": "#E67E22"
-            }
-            color = color_map.get(model, "blue")
+            # Graficar — paleta unificada de la HU-006 (pasteles morados).
+            from ui.styles import IPR_MODEL_COLORS, IPR_PALETTE
+            color = IPR_MODEL_COLORS.get(model, IPR_PALETTE[0])
             
             self.graph.plot_curve(q_res, p_res, f"IPR - {model}", color, clear=True)
 

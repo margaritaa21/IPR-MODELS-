@@ -1,32 +1,115 @@
 from tkinter import ttk
 
+
+# Paleta unificada de curvas IPR — pasteles morados extendidos.
+# 12 colores; orden estable para que la asignación a cada modelo no varíe
+# entre invocaciones (CA-3 de HU-006).
+IPR_PALETTE = [
+    "#8A56AC",  # primary (violeta clásico)
+    "#B58FCB",  # secondary (lila apagado)
+    "#5D3A7A",  # primary dark
+    "#D98C9C",  # rosa coral pastel (danger soft)
+    "#7DBE8A",  # verde pastel (success)
+    "#E8C46B",  # amarillo pastel (warning)
+    "#8FB7D9",  # azul pastel (info)
+    "#A982D6",  # primary hover (violeta brillante)
+    "#C9A8DA",  # secondary hover (lila claro)
+    "#6E5A82",  # text muted
+    "#9B6BBE",  # violeta saturado intermedio
+    "#E0B0E0",  # rosa-lila claro
+]
+
+# Mapeo determinista modelo → color (uno por cada entrada del Combobox IPR).
+IPR_MODEL_COLORS = {
+    "Vogel (Subsaturado)":          IPR_PALETTE[0],
+    "Fetkovich-gas":                IPR_PALETTE[1],
+    "Wiggins":                      IPR_PALETTE[2],
+    "Darcy (Semi-Estacionario)":    IPR_PALETTE[3],
+    "Brown":                        IPR_PALETTE[4],
+    "Joshi Horizontal":             IPR_PALETTE[5],
+    "Babu y Odeh":                  IPR_PALETTE[6],
+    "Vogel Modificado (Kabir)":     IPR_PALETTE[7],
+    "Economides y Retnanto":        IPR_PALETTE[8],
+    "Bendakhlia y Aziz":            IPR_PALETTE[9],
+    "Cheng":                        IPR_PALETTE[10],
+}
+
+
 class VioletTheme:
     """
     Configuración centralizada de estilos (Soporta Tema Claro y Oscuro Claro).
     """
     _mode = "dark"
 
+    # Paleta de curvas accesible vía la clase para uso desde la UI.
+    IPR_PALETTE = IPR_PALETTE
+    IPR_MODEL_COLORS = IPR_MODEL_COLORS
+
     @classmethod
     def get_colors(cls):
         if cls._mode == "dark":
             return {
-                "BG_COLOR": "#2B2B2B",
-                "FRAME_BG": "#3C3F41",
+                # ── Claves existentes (backward-compat) ────────────────
+                "BG_COLOR":     "#2B2B2B",
+                "FRAME_BG":     "#3C3F41",
                 "HEADER_COLOR": "#1E1E1E",
-                "BTN_COLOR": "#6C4B91",
-                "BTN_HOVER": "#8A56AC",
-                "TEXT_COLOR": "#F5F5F5",
-                "ENTRY_BG": "#4E5254"
+                "BTN_COLOR":    "#6C4B91",
+                "BTN_HOVER":    "#8A56AC",
+                "TEXT_COLOR":   "#F5F5F5",
+                "ENTRY_BG":     "#4E5254",
+                # ── Tokens semánticos extendidos (HU-006) ──────────────
+                # Superficies
+                "SURFACE":          "#352A42",
+                "SURFACE_ALT":      "#3F3350",
+                "BORDER":           "#4A3D5A",
+                # Texto
+                "TEXT_MUTED":       "#B7A7C6",
+                "TEXT_ON_PRIMARY":  "#FFFFFF",
+                # Acentos
+                "PRIMARY":          "#8A56AC",
+                "PRIMARY_HOVER":    "#A982D6",
+                "PRIMARY_SOFT":     "#4A3760",
+                "SECONDARY":        "#7E5E96",
+                "SECONDARY_HOVER":  "#9772AE",
+                # Estados
+                "SUCCESS":          "#8FC79B",
+                "WARNING":          "#E4C77A",
+                "DANGER":           "#D99AA8",
+                "INFO":             "#9CBFDD",
+                # Inputs
+                "ENTRY_BORDER":     "#5C4D6C",
             }
         else:
             return {
-                "BG_COLOR": "#E8D8F1",
-                "FRAME_BG": "#F4EAF9",
+                # ── Claves existentes (backward-compat) ────────────────
+                "BG_COLOR":     "#E8D8F1",
+                "FRAME_BG":     "#F4EAF9",
                 "HEADER_COLOR": "#5D3A7A",
-                "BTN_COLOR": "#8A56AC",
-                "BTN_HOVER": "#A982D6",
-                "TEXT_COLOR": "#2E2133",
-                "ENTRY_BG": "#FFFFFF"
+                "BTN_COLOR":    "#8A56AC",
+                "BTN_HOVER":    "#A982D6",
+                "TEXT_COLOR":   "#2E2133",
+                "ENTRY_BG":     "#FFFFFF",
+                # ── Tokens semánticos extendidos (HU-006) ──────────────
+                # Superficies
+                "SURFACE":          "#FFFFFF",
+                "SURFACE_ALT":      "#EFE3F7",
+                "BORDER":           "#D8C6E6",
+                # Texto
+                "TEXT_MUTED":       "#6E5A82",
+                "TEXT_ON_PRIMARY":  "#FFFFFF",
+                # Acentos
+                "PRIMARY":          "#8A56AC",
+                "PRIMARY_HOVER":    "#A982D6",
+                "PRIMARY_SOFT":     "#E5D4F2",
+                "SECONDARY":        "#B58FCB",
+                "SECONDARY_HOVER":  "#C9A8DA",
+                # Estados
+                "SUCCESS":          "#7DBE8A",
+                "WARNING":          "#E8C46B",
+                "DANGER":           "#D98C9C",
+                "INFO":             "#8FB7D9",
+                # Inputs
+                "ENTRY_BORDER":     "#C9B3DA",
             }
 
     FONT_FAMILY = "Segoe UI"
