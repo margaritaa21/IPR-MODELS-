@@ -273,64 +273,112 @@ class IPRModels:
 
     @staticmethod
     def babu_odeh(kx, ky, kz, h, a_res, b_res, mu, bo, L, rw, x_mid, y_0, z_0, s_res, p_res, steps=20):
-        """**EXPERIMENTAL** — Babu y Odeh (1989) para pozo horizontal en caja rectangular.
+        """Babu y Odeh (1989) — IPR de pozo horizontal en caja rectangular delimitada.
 
-        Implementación actual no reproduce el J esperado del ejemplo PDF p. 30
-        (entrega J ≈ 12,4 vs ≈ 19,98 de Helmy-Wattenbarger; gap ~38 %).
-        El factor de forma ln(C_H) y el skin de penetración parcial s_R están
-        bajo revisión — ver HU-007. Usar Vogel-Kabir (`pi_source="helmy"`) o
-        Joshi como referencias mientras tanto.
+        Convención: el pozo corre a lo largo del eje **Y** con longitud L (≤ b_res).
+            a_res = dimensión X (transversa al pozo)
+            b_res = dimensión Y (dirección del pozo)
+            h     = espesor (Z)
+            x_mid = posición X del centro del pozo (= a_res/2 para centrado)
+            y_0   = posición Y del centro del pozo (= b_res/2 para centrado)
+            z_0   = posición Z del centro del pozo (= h/2  para centrado)
 
-        Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES (referencia general
-        sec. 3.2.x); el PDF cita Babu & Odeh (1989) sin reproducir la fórmula
-        completa.
+        Fórmula:
+            J = (0.00708·b·√(kx·kz)) / [μ·B·(ln(√A/r_w_eq) + ln(C_H) - 0.75 + s_R + s_d)]
+        con A = a·h, r_w_eq = (r_w/2)·[(kz/kx)^¼ + (kx/kz)^¼], y
+        ln(C_H) = 6.28·(a/h)·√(kz/kx)·[⅓ - x_mid/a + (x_mid/a)²]
+                  - ln(sin(π·z_0/h)) - 0.5·ln[(a/h)·√(kz/kx)] - 1.088.
+
+        s_R (skin de penetración parcial) se aplica sólo si L < b_res y se
+        selecciona entre dos regímenes según `a/√ky` vs `0.75·b/√kx`
+        (Babu-Odeh 1989, eqs. (24)-(31)).
+
+        Ref: Babu, D. K., & Odeh, A. S. (1989), "Productivity of a Horizontal
+        Well", SPE Reservoir Engineering, Nov 1989. Reproducción didáctica en
+        Joshi & Economides, "Petroleum Production Systems", Cap. 8.
+
+        Auditoría (HU-007, 2026-05-25): se corrigieron 4 bugs respecto a la
+        implementación previa: (i) `r_w` desnudo → `r_w_eq` con anisotropía
+        vertical en denominador principal; (ii) `√(ky·kz)` → `√(kx·kz)` en
+        el numerador (kx ⊥ pozo en plano horizontal); (iii) `I_ani = √(kx/ky)`
+        → `√(kx/kz)` en P_xy' (anisotropía vertical relevante para penetración
+        parcial); (iv) confusión de ejes y_0↔x_mid en términos C_H, P_y, P_xy.
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
         try:
-            # Babu and Odeh rigorous calculation
-            # a_res is dimension along x-axis, b_res is dimension along y-axis (well direction is y)
             A = a_res * h
-            
-            # Form factor CH
-            term_ch1 = 6.28 * (a_res / h) * np.sqrt(kz / kx)
-            term_ch2 = (1/3) - (y_0 / a_res) + (y_0 / a_res)**2
-            term_ch3 = np.log(np.sin(np.pi * z_0 / h))
-            term_ch4 = 0.5 * np.log(a_res / h * np.sqrt(kz / kx))
-            ln_CH = term_ch1 * term_ch2 - term_ch3 - term_ch4 - 1.088
-            
-            # Partial penetration skin SR
-            s_R = 0
+
+            # Radio equivalente del pozo en plano X-Z (anisotropía vertical).
+            rw_eq = (rw / 2.0) * ((kz / kx) ** 0.25 + (kx / kz) ** 0.25)
+
+            # Factor de forma C_H (pozo perpendicular a X y Z; depende de x_mid y z_0).
+            a_over_h_anis = (a_res / h) * np.sqrt(kz / kx)
+            xm_over_a = x_mid / a_res
+            z_over_h = z_0 / h
+            ln_CH = (
+                6.28 * a_over_h_anis * (1.0 / 3.0 - xm_over_a + xm_over_a ** 2)
+                - np.log(np.sin(np.pi * z_over_h))
+                - 0.5 * np.log(a_over_h_anis)
+                - 1.088
+            )
+
+            # Skin de penetración parcial (sólo si L < b_res).
+            s_R = 0.0
             if L < b_res:
-                # Simplified skin logic if partially penetrated
-                def F(x, b_L_ratio):
+                def F(x):
                     if x <= 1:
-                        return -x * (0.145 + np.log(x) - 0.137 * x**2)
+                        return -x * (0.145 + np.log(x) - 0.137 * x ** 2)
                     else:
-                        return (2 - x) * (0.145 + np.log(2 - x) - 0.137 * (2 - x)**2)
-                
-                L_2b = L / (2 * b_res)
-                xmid_L_2b_plus = (4 * x_mid + L) / (2 * b_res)
-                xmid_L_2b_minus = (4 * x_mid - L) / (2 * b_res)
-                
-                P_xyz = (b_res / L - 1) * (np.log(h / rw * np.sqrt(ky / kz)) + 0.25 * np.log(ky / kz) - np.log(np.sin(np.pi * z_0 / h)) - 1.84)
-                
-                I_ani_y_x = np.sqrt(kx / ky)
-                P_xy_prime = (2 * b_res**2 / (I_ani_y_x * L * h)) * (F(L_2b, b_res) + 0.5 * (F(xmid_L_2b_plus, b_res) - F(xmid_L_2b_minus, b_res)))
-                P_y = (6.28 * b_res**2 * np.sqrt(ky * kz) / (a_res * h * kx)) * (1/3 - x_mid/b_res + (x_mid/b_res)**2 + (L/(24*b_res)) * (L/b_res - 3))
-                P_xy = (b_res / L - 1) * (6.28 * a_res / h * np.sqrt(kz / ky)) * (1/3 - y_0/a_res + (y_0/a_res)**2)
-                
-                # Condition simplified for s_R assignment
+                        return (2.0 - x) * (
+                            0.145 + np.log(2.0 - x) - 0.137 * (2.0 - x) ** 2
+                        )
+
+                L_2b = L / (2.0 * b_res)
+                # Los extremos del pozo en dirección Y normalizados por b_res.
+                y0_plus = (4.0 * y_0 + L) / (2.0 * b_res)
+                y0_minus = (4.0 * y_0 - L) / (2.0 * b_res)
+
+                P_xyz = (b_res / L - 1.0) * (
+                    np.log(h / rw * np.sqrt(ky / kz))
+                    + 0.25 * np.log(ky / kz)
+                    - np.log(np.sin(np.pi * z_over_h))
+                    - 1.84
+                )
+
+                # Anisotropía vertical (k_x⊥pozo vs k_z) — afecta a la convergencia
+                # del flujo en el plano transverso X-Z hacia el extremo del pozo.
+                I_ani_xz = np.sqrt(kx / kz)
+                P_xy_prime = (2.0 * b_res ** 2 / (I_ani_xz * L * h)) * (
+                    F(L_2b) + 0.5 * (F(y0_plus) - F(y0_minus))
+                )
+
+                # P_y: posición en dirección del pozo (Y) sobre dimensión Y.
+                yw_over_b = y_0 / b_res
+                P_y = (6.28 * b_res ** 2 * np.sqrt(ky * kz) / (a_res * h * kx)) * (
+                    1.0 / 3.0 - yw_over_b + yw_over_b ** 2
+                    + (L / (24.0 * b_res)) * (L / b_res - 3.0)
+                )
+
+                # P_xy: posición transversa (X) sobre dimensión X.
+                P_xy = (b_res / L - 1.0) * (6.28 * a_res / h * np.sqrt(kz / ky)) * (
+                    1.0 / 3.0 - xm_over_a + xm_over_a ** 2
+                )
+
+                # Selección de régimen según relación de dimensiones equivalentes.
                 if a_res / np.sqrt(ky) >= 0.75 * b_res / np.sqrt(kx):
                     s_R = P_xyz + P_xy_prime
                 else:
                     s_R = P_xyz + P_y + P_xy
-            
-            denom = mu * bo * (np.log(np.sqrt(A) / rw) + ln_CH - 0.75 + s_R + s_res)
-            j_index = (0.00708 * b_res * np.sqrt(ky * kz)) / denom if denom > 0 else 0
+
+            denom = mu * bo * (
+                np.log(np.sqrt(A) / rw_eq) + ln_CH - 0.75 + s_R + s_res
+            )
+            # Numerador con √(kx·kz): kx y kz son las dos perms perpendiculares al pozo.
+            j_index = (0.00708 * b_res * np.sqrt(kx * kz)) / denom if denom > 0 else 0
         except Exception:
             j_index = 0
-            
+
         for pwf in pwf_values:
             q = j_index * (p_res - pwf)
             q_values.append(max(0, q))

@@ -51,9 +51,14 @@ def test_ca2_joshi_pi_within_widened_range():
     assert j == pytest.approx(15.26, abs=0.10)
 
 
-# ── CA-3 — Babu-Odeh (etiqueta experimental) ───────────────────────────────
-def test_ca3_babu_odeh_runs_without_exception_and_is_marked_experimental():
-    """Babu-Odeh ejecuta sin excepciones; etiqueta EXPERIMENTAL presente en docstring."""
+# ── CA-3 — Babu-Odeh (auditado en HU-007: ya no es experimental) ──────────
+def test_ca3_babu_odeh_runs_without_exception():
+    """Babu-Odeh ejecuta sin excepciones para los inputs PDF.
+
+    Nota: tras HU-007 la implementación fue auditada y la etiqueta EXPERIMENTAL
+    fue removida; el test específico de [17, 22] está en
+    `tests/test_hu007_babu_odeh.py::test_ca1_babu_odeh_pi_in_target_range`.
+    """
     q, p = IPRModels.babu_odeh(
         kx=100, ky=100, kz=10, h=100, a_res=2000, b_res=2000,
         mu=1.095, bo=1.278, L=1000, rw=0.25,
@@ -61,8 +66,6 @@ def test_ca3_babu_odeh_runs_without_exception_and_is_marked_experimental():
     )
     assert q.shape == (20,)
     assert np.all(np.isfinite(q))
-    assert "EXPERIMENTAL" in (IPRModels.babu_odeh.__doc__ or ""), \
-        "babu_odeh debe estar marcado EXPERIMENTAL en docstring (HU-004)"
 
 
 # ── CA-4 — Cheng validado contra Ec. 3-32 canónica ──────────────────────────
@@ -98,12 +101,18 @@ def test_ca5_bendakhlia_aziz_within_5pct_of_pdf():
     )
 
 
-# ── Coverage adicional: que los docstrings citen el PDF ─────────────────────
-def test_docstrings_cite_pdf_reference():
-    """Los 4 modelos horizontales mencionan MODULO III en su docstring."""
-    for fn in [IPRModels.joshi, IPRModels.babu_odeh, IPRModels.cheng,
-               IPRModels.bendakhlia_aziz]:
-        assert "MODULO III" in (fn.__doc__ or ""), f"{fn.__name__} sin ref PDF"
+# ── Coverage adicional: que los docstrings citen documentación ─────────────
+def test_docstrings_cite_documentation_reference():
+    """Los 4 modelos horizontales tienen referencia documental en su docstring.
+
+    Joshi, Cheng y Bendakhlia-Aziz citan MODULO III; Babu-Odeh (tras la auditoría
+    de HU-007) cita el paper original Babu & Odeh 1989 directamente.
+    """
+    for fn in [IPRModels.joshi, IPRModels.cheng, IPRModels.bendakhlia_aziz]:
+        assert "MODULO III" in (fn.__doc__ or ""), f"{fn.__name__} sin ref MODULO III"
+    bo_doc = IPRModels.babu_odeh.__doc__ or ""
+    assert "Babu" in bo_doc and "1989" in bo_doc, \
+        "babu_odeh sin ref al paper original Babu & Odeh 1989"
 
 
 # ── Cheng — verificación adicional contra Tabla 3-1 fila por fila ──────────
