@@ -97,7 +97,7 @@ class IPRTab(ttk.Frame):
         # Generar campos según selección
         if model == "Fetkovich-gas":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
-            self.create_entry("Coeficiente C:", "c_fet", "0.5")
+            self.create_entry("Coeficiente C (Mscf/d/psi²ⁿ):", "c_fet", "0.5")
             self.create_entry("Exponente n:", "n_fet", "1.0")
         elif model == "Wiggins":
             self.create_entry("Presión Yac. (psi):", "pres", "4000")
@@ -118,16 +118,34 @@ class IPRTab(ttk.Frame):
             self.create_entry("Índice Prod J:", "j_index", "1.5")
         elif model == "Brown":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
-            self.create_entry("Q max Aceite (STB/d):", "qmax_o", "1500")
+            self.create_entry("P Burbuja Pb (psi):", "pb", "1500")
+            self.create_entry("Índice Prod J:", "j_index", "1.5")
             self.create_entry("Water Cut %:", "w_cut", "20")
         elif model == "Cheng":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
-            self.create_entry("Q max (STB/d):", "qmax", "1500")
+            self.create_entry("P Burbuja Pb (psi):", "pb", "3000")
             self.create_entry("Ángulo (°):", "angle", "90")
+            self.create_entry("Permeabilidad kH (md):", "kh", "100")
+            self.create_entry("Permeabilidad kV (md):", "kv", "10")
+            self.create_entry("Espesor h (ft):", "h", "100")
+            self.create_entry("Viscosidad μ (cp):", "mu", "2.0")
+            self.create_entry("Factor Vol. Bo:", "bo", "1.2")
+            self.create_entry("Longitud Pozo L (ft):", "L", "2000")
+            self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
+            self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
+            self.create_entry("Skin (s):", "skin", "0")
         elif model == "Economides y Retnanto":
             self.create_entry("Presión Yac. (psi):", "pres", "4000")
             self.create_entry("P Burbuja Pb (psi):", "pb", "3000")
-            self.create_entry("Q max (STB/d):", "qmax", "1500")
+            self.create_entry("Permeabilidad kH (md):", "kh", "100")
+            self.create_entry("Permeabilidad kV (md):", "kv", "10")
+            self.create_entry("Espesor h (ft):", "h", "100")
+            self.create_entry("Viscosidad μ (cp):", "mu", "2.0")
+            self.create_entry("Factor Vol. Bo:", "bo", "1.2")
+            self.create_entry("Longitud Pozo L (ft):", "L", "2000")
+            self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
+            self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
+            self.create_entry("Skin (s):", "skin", "0")
         elif model == "Joshi Horizontal":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
             self.create_entry("Permeabilidad kH (md):", "kh", "100")
@@ -169,11 +187,36 @@ class IPRTab(ttk.Frame):
             self.create_entry("Skin (s):", "skin", "0")
         elif model == "Bendakhlia y Aziz":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
-            self.create_entry("Q max (STB/d):", "qmax", "1500")
+            self.create_entry("P Burbuja Pb (psi):", "pb", "3000")
             self.create_entry("Factor de Recobro (Frac):", "rec_factor", "0.05")
+            self.create_entry("Permeabilidad kH (md):", "kh", "100")
+            self.create_entry("Permeabilidad kV (md):", "kv", "10")
+            self.create_entry("Espesor h (ft):", "h", "100")
+            self.create_entry("Viscosidad μ (cp):", "mu", "2.0")
+            self.create_entry("Factor Vol. Bo:", "bo", "1.2")
+            self.create_entry("Longitud Pozo L (ft):", "L", "2000")
+            self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
+            self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
+            self.create_entry("Skin (s):", "skin", "0")
             
             # Botón para mostrar la regresión
             ttk.Button(self.input_frame, text="Ver Regresión (n y V)", command=self.show_nv_regression).pack(pady=10)
+
+        # Notify VLP tab to update its fields and adjust headers based on fluid/language
+        from ui.i18n import I18N
+        self.tree.heading("pwf", text="Presión de Fondo (psi)" if I18N._lang == "es" else "Bottomhole Pressure (psi)")
+        if model == "Fetkovich-gas":
+            self.tree.heading("q", text="Caudal (Mscf/d)" if I18N._lang == "es" else "Flow Rate (Mscf/d)")
+        else:
+            self.tree.heading("q", text="Caudal (STB/d)" if I18N._lang == "es" else "Flow Rate (STB/d)")
+            
+        try:
+            if hasattr(self.master, "master") and hasattr(self.master.master, "tab_vlp"):
+                vlp_tab = self.master.master.tab_vlp
+                if hasattr(vlp_tab, "update_fields_for_fluid_type"):
+                    vlp_tab.update_fields_for_fluid_type()
+        except Exception:
+            pass
 
     def show_nv_regression(self):
         import tkinter as tk
@@ -280,16 +323,29 @@ class IPRTab(ttk.Frame):
                 import warnings as _warnings
                 with _warnings.catch_warnings(record=True) as caught:
                     _warnings.simplefilter("always", UserWarning)
-                    q_res, p_res = IPRModels.economides_retnanto(self.get_float("qmax"), self.get_float("pres"), self.get_float("pb"))
+                    q_res, p_res = IPRModels.economides_retnanto(
+                        self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
+                        self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
+                        self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
+                        self.get_float("pres"), self.get_float("pb")
+                    )
                 for w in caught:
                     if issubclass(w.category, UserWarning):
                         messagebox.showwarning("Economides–Retnanto — fuera de rango", str(w.message))
             elif model == "Vogel (Subsaturado)":
                 q_res, p_res = IPRModels.vogel_subsaturado(self.get_float("pres"), self.get_float("pb"), self.get_float("j_index"))
             elif model == "Brown":
-                q_res, p_res = IPRModels.brown(self.get_float("qmax_o"), self.get_float("pres"), self.get_float("w_cut"))
+                q_res, p_res = IPRModels.brown(
+                    self.get_float("pres"), self.get_float("pb"),
+                    self.get_float("j_index"), self.get_float("w_cut")
+                )
             elif model == "Cheng":
-                q_res, p_res = IPRModels.cheng(self.get_float("qmax"), self.get_float("pres"), self.get_float("angle"))
+                q_res, p_res = IPRModels.cheng(
+                    self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
+                    self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
+                    self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
+                    self.get_float("pres"), self.get_float("pb"), self.get_float("angle")
+                )
             elif model == "Joshi Horizontal":
                 q_res, p_res = IPRModels.joshi(self.get_float("kh"), self.get_float("kv"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("reh"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"))
             elif model == "Babu y Odeh":
@@ -297,13 +353,20 @@ class IPRTab(ttk.Frame):
             elif model == "Vogel Modificado (Kabir)":
                 q_res, p_res = IPRModels.vogel_kabir(self.get_float("kh"), self.get_float("kv"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("reh"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"), self.get_float("pb"))
             elif model == "Bendakhlia y Aziz":
-                q_res, p_res = IPRModels.bendakhlia_aziz(self.get_float("qmax"), self.get_float("pres"), self.get_float("rec_factor"))
+                q_res, p_res = IPRModels.bendakhlia_aziz(
+                    self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
+                    self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
+                    self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
+                    self.get_float("pres"), self.get_float("pb"), self.get_float("rec_factor")
+                )
 
             # Graficar — paleta unificada de la HU-006 (pasteles morados).
             from ui.styles import IPR_MODEL_COLORS, IPR_PALETTE
+            from ui.i18n import I18N
             color = IPR_MODEL_COLORS.get(model, IPR_PALETTE[0])
             
-            self.graph.plot_curve(q_res, p_res, f"IPR - {model}", color, clear=True)
+            xlabel = I18N.get("q_label_gas") if model == "Fetkovich-gas" else I18N.get("q_label")
+            self.graph.plot_curve(q_res, p_res, f"IPR - {model}", color, clear=True, xlabel=xlabel, ylabel="Pwf [psi]", title="Curva IPR")
 
             # Llenar Tabla (Invertimos el orden para mostrar desde Pwf alta a baja o viceversa)
             # Normalmente se muestra de Pwf alta (Q=0) a Pwf baja (Qmax)

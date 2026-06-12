@@ -56,12 +56,12 @@ class GraphWidget(ttk.Frame):
         self.ax.set_title(title, fontsize=11, fontname="Segoe UI", weight='bold', color=c["TEXT_COLOR"])
         self.ax.grid(True, linestyle='--', alpha=0.3, color=c["TEXT_COLOR"])
 
-    def plot_curve(self, x, y, label, color, clear=False):
+    def plot_curve(self, x, y, label, color, clear=False, xlabel="Caudal Q [STB/d]", ylabel="Pwf [psi]", title="Análisis Nodal"):
         c = VioletTheme.get_colors()
         if clear:
             self.ax.clear()
             self.points_data = []
-            self.set_labels("Caudal Q [STB/d]", "Pwf [psi]", "Análisis Nodal")
+            self.set_labels(xlabel, ylabel, title)
             self.annot = self.ax.annotate(
                 "", xy=(0,0), xytext=(15, 15), textcoords="offset points",
                 bbox=dict(boxstyle="round,pad=0.6", fc=c["BTN_COLOR"], ec=c["TEXT_COLOR"], lw=1.5, alpha=0.95),
@@ -120,7 +120,8 @@ class GraphWidget(ttk.Frame):
                     
                     if closest_x is not None:
                         self.annot.xy = (closest_x, closest_y)
-                        self.annot.set_text(f"  Q: {closest_x:.1f} STB/d  \n  Pwf: {closest_y:.1f} psi  ")
+                        unit = "Mscf/d" if "Mscf" in self.ax.get_xlabel() else "STB/d"
+                        self.annot.set_text(f"  Q: {closest_x:.1f} {unit}  \n  Pwf: {closest_y:.1f} psi  ")
                         self.annot.get_bbox_patch().set_facecolor("#6C4B91") # Morado para líneas
                         point_found = True
                 

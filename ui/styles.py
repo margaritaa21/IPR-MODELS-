@@ -50,25 +50,25 @@ class VioletTheme:
         if cls._mode == "dark":
             return {
                 # ── Claves existentes (backward-compat) ────────────────
-                "BG_COLOR":     "#2B2B2B",
-                "FRAME_BG":     "#3C3F41",
-                "HEADER_COLOR": "#1E1E1E",
-                "BTN_COLOR":    "#6C4B91",
-                "BTN_HOVER":    "#8A56AC",
-                "TEXT_COLOR":   "#F5F5F5",
-                "ENTRY_BG":     "#4E5254",
+                "BG_COLOR":     "#120F1F",
+                "FRAME_BG":     "#1C182F",
+                "HEADER_COLOR": "#0B0914",
+                "BTN_COLOR":    "#7E4EAC",
+                "BTN_HOVER":    "#9F66D6",
+                "TEXT_COLOR":   "#F0ECF8",
+                "ENTRY_BG":     "#292440",
                 # ── Tokens semánticos extendidos (HU-006) ──────────────
                 # Superficies
-                "SURFACE":          "#352A42",
-                "SURFACE_ALT":      "#3F3350",
-                "BORDER":           "#4A3D5A",
+                "SURFACE":          "#1C182F",
+                "SURFACE_ALT":      "#25203C",
+                "BORDER":           "#332C52",
                 # Texto
-                "TEXT_MUTED":       "#B7A7C6",
+                "TEXT_MUTED":       "#A795B8",
                 "TEXT_ON_PRIMARY":  "#FFFFFF",
                 # Acentos
                 "PRIMARY":          "#8A56AC",
                 "PRIMARY_HOVER":    "#A982D6",
-                "PRIMARY_SOFT":     "#4A3760",
+                "PRIMARY_SOFT":     "#2D2342",
                 "SECONDARY":        "#7E5E96",
                 "SECONDARY_HOVER":  "#9772AE",
                 # Estados
@@ -77,30 +77,30 @@ class VioletTheme:
                 "DANGER":           "#D99AA8",
                 "INFO":             "#9CBFDD",
                 # Inputs
-                "ENTRY_BORDER":     "#5C4D6C",
+                "ENTRY_BORDER":     "#332C52",
             }
         else:
             return {
                 # ── Claves existentes (backward-compat) ────────────────
-                "BG_COLOR":     "#E8D8F1",
-                "FRAME_BG":     "#F4EAF9",
-                "HEADER_COLOR": "#5D3A7A",
+                "BG_COLOR":     "#F3EEF8",
+                "FRAME_BG":     "#FFFFFF",
+                "HEADER_COLOR": "#E7DCF2",
                 "BTN_COLOR":    "#8A56AC",
                 "BTN_HOVER":    "#A982D6",
-                "TEXT_COLOR":   "#2E2133",
-                "ENTRY_BG":     "#FFFFFF",
+                "TEXT_COLOR":   "#2B1C3C",
+                "ENTRY_BG":     "#F7F4FA",
                 # ── Tokens semánticos extendidos (HU-006) ──────────────
                 # Superficies
                 "SURFACE":          "#FFFFFF",
-                "SURFACE_ALT":      "#EFE3F7",
-                "BORDER":           "#D8C6E6",
+                "SURFACE_ALT":      "#F1EBF7",
+                "BORDER":           "#E2D8ED",
                 # Texto
-                "TEXT_MUTED":       "#6E5A82",
+                "TEXT_MUTED":       "#7D6890",
                 "TEXT_ON_PRIMARY":  "#FFFFFF",
                 # Acentos
                 "PRIMARY":          "#8A56AC",
                 "PRIMARY_HOVER":    "#A982D6",
-                "PRIMARY_SOFT":     "#E5D4F2",
+                "PRIMARY_SOFT":     "#F4EBFB",
                 "SECONDARY":        "#B58FCB",
                 "SECONDARY_HOVER":  "#C9A8DA",
                 # Estados
@@ -109,7 +109,7 @@ class VioletTheme:
                 "DANGER":           "#D98C9C",
                 "INFO":             "#8FB7D9",
                 # Inputs
-                "ENTRY_BORDER":     "#C9B3DA",
+                "ENTRY_BORDER":     "#E2D8ED",
             }
 
     FONT_FAMILY = "Segoe UI"
@@ -135,9 +135,10 @@ class VioletTheme:
         style.configure("TNotebook", background=c["BG_COLOR"], borderwidth=0)
         style.configure("TNotebook.Tab", 
                         background=c["HEADER_COLOR"], 
-                        foreground="#A0A0A0" if cls._mode == "dark" else "#D0C0D0", 
-                        padding=(15, 5),
-                        font=(cls.FONT_FAMILY, 10, "bold"))
+                        foreground="#A0A0A0" if cls._mode == "dark" else "#7D6890", 
+                        padding=(20, 8),
+                        font=(cls.FONT_FAMILY, 10, "bold"),
+                        borderwidth=0)
         style.map("TNotebook.Tab",
                   background=[("selected", c["BTN_COLOR"])],
                   foreground=[("selected", "#FFFFFF")])
@@ -148,7 +149,7 @@ class VioletTheme:
                         foreground="white", 
                         font=(cls.FONT_FAMILY, 10, "bold"),
                         borderwidth=0,
-                        padding=5)
+                        padding=(12, 6))
         style.map("TButton",
                   background=[("active", c["BTN_HOVER"])])
         
@@ -157,17 +158,39 @@ class VioletTheme:
         style.configure("Panel.TFrame", background=c["FRAME_BG"])
         style.configure("TLabel", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"])
         style.configure("Panel.TLabel", background=c["FRAME_BG"], foreground=c["TEXT_COLOR"])
-        style.configure("TLabelframe", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"])
-        style.configure("TLabelframe.Label", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"], font=(cls.FONT_FAMILY, 10, "bold"))
+        style.configure("TLabelframe", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"], bordercolor=c["BORDER"], borderwidth=1, relief="solid")
+        style.configure("TLabelframe.Label", background=c["BG_COLOR"], foreground=c["PRIMARY"], font=(cls.FONT_FAMILY, 10, "bold"))
         
-        # Entry
-        style.configure("TEntry", fieldbackground=c["ENTRY_BG"], foreground=c["TEXT_COLOR"], borderwidth=0)
+        # Entry (Padding and border color in Clam theme)
+        style.configure("TEntry", 
+                        fieldbackground=c["ENTRY_BG"], 
+                        foreground=c["TEXT_COLOR"], 
+                        bordercolor=c["BORDER"], 
+                        lightcolor=c["BORDER"], 
+                        darkcolor=c["BORDER"], 
+                        insertcolor=c["TEXT_COLOR"], 
+                        padding=6,
+                        borderwidth=1)
+        
+        # Combobox
+        style.configure("TCombobox", 
+                        fieldbackground=c["ENTRY_BG"], 
+                        background=c["BG_COLOR"], 
+                        foreground=c["TEXT_COLOR"], 
+                        bordercolor=c["BORDER"], 
+                        lightcolor=c["BORDER"], 
+                        darkcolor=c["BORDER"], 
+                        arrowcolor=c["TEXT_COLOR"], 
+                        padding=6,
+                        borderwidth=1)
         
         # Treeview y Scrollbar
         style.configure("Treeview", 
                         background=c["ENTRY_BG"], 
                         foreground=c["TEXT_COLOR"], 
                         fieldbackground=c["ENTRY_BG"], 
+                        rowheight=26,
+                        font=(cls.FONT_FAMILY, 9),
                         borderwidth=0)
         style.map("Treeview", 
                   background=[("selected", c["BTN_COLOR"])], 
@@ -176,11 +199,16 @@ class VioletTheme:
         style.configure("Treeview.Heading", 
                         background=c["HEADER_COLOR"], 
                         foreground="white", 
-                        font=(cls.FONT_FAMILY, 9, "bold"))
+                        font=(cls.FONT_FAMILY, 9, "bold"),
+                        padding=6,
+                        borderwidth=1,
+                        bordercolor=c["BORDER"])
         
         style.configure("Vertical.TScrollbar", 
                         background=c["FRAME_BG"], 
                         troughcolor=c["BG_COLOR"], 
-                        arrowcolor=c["TEXT_COLOR"])
+                        arrowcolor=c["TEXT_COLOR"],
+                        borderwidth=0,
+                        gripcount=0)
         
         root.configure(bg=c["BG_COLOR"])

@@ -77,7 +77,7 @@ def test_ca2_darcy_pi_matches_eq_2_14():
 # ── CA-3: Brown ────────────────────────────────────────────────────────────
 def test_ca3_brown_wc20_equals_qo_times_1_25():
     """Brown con WC=20 % cumple qt = qo·(1 + 20/80) = qo·1.25 en cada punto."""
-    q, p = IPRModels.brown(q_max_o=1500, p_res=3000, w_cut=20, steps=400)
+    q, p = IPRModels.brown(p_res=3000, pb=3000, j_index=0.9, w_cut=20, steps=400)
     # qo de Vogel saturado con qmax=1500
     r = p / 3000.0
     qo_pure = 1500.0 * (1 - 0.2 * r - 0.8 * r ** 2)
@@ -89,7 +89,7 @@ def test_ca3_brown_wc20_equals_qo_times_1_25():
 
 def test_brown_zero_water_cut_equals_vogel():
     """Brown con WC=0 reduce a Vogel saturado puro."""
-    q_brown, p = IPRModels.brown(q_max_o=1500, p_res=3000, w_cut=0, steps=400)
+    q_brown, p = IPRModels.brown(p_res=3000, pb=3000, j_index=0.9, w_cut=0, steps=400)
     r = p / 3000.0
     q_vogel = np.maximum(1500.0 * (1 - 0.2 * r - 0.8 * r ** 2), 0.0)
     np.testing.assert_allclose(q_brown, q_vogel, atol=1e-6)
@@ -101,7 +101,7 @@ def test_brown_zero_water_cut_equals_vogel():
     ("Wiggins",    lambda: IPRModels.wiggins(p_res=4000, pb=3000, j_index=1.5, steps=200)),
     ("Darcy",      lambda: IPRModels.darcy(k=50, h=30, mu=1.5, bo=1.2, re=1000, rw=0.328, s=0, p_res=3000, steps=200)),
     ("VogelSub",   lambda: IPRModels.vogel_subsaturado(p_res=4000, pb=3000, j_index=1.5, steps=200)),
-    ("Brown",      lambda: IPRModels.brown(q_max_o=1500, p_res=3000, w_cut=20, steps=200)),
+    ("Brown",      lambda: IPRModels.brown(p_res=3000, pb=3000, j_index=0.9, w_cut=20, steps=200)),
 ])
 def test_ca4_no_nan_or_inf(name, qp):
     """Los 5 modelos verticales no producen NaN/inf con inputs por defecto del UI."""

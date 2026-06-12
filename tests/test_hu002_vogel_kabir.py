@@ -147,7 +147,9 @@ def test_ca5_other_horizontal_models_unchanged():
     j = IPRModels.joshi(kh=100, kv=10, h=100, mu=2.0, bo=1.2, L=2000,
                        reh=1500, rw=0.328, s=0, p_res=3000)
     assert j[0].shape == (20,)
-    b = IPRModels.bendakhlia_aziz(q_max=1500, p_res=3000, rec_factor=0.05)
+    b = IPRModels.bendakhlia_aziz(kh=100, kv=10, h=100, mu=2.0, bo=1.2, L=2000,
+                                  reh=1500, rw=0.328, s=0, p_res=3000, pb=3000, rec_factor=0.05)
     assert b[0].shape == (20,)
-    c = IPRModels.cheng(q_max=1500, p_res=3000, angle=90)
+    c = IPRModels.cheng(kh=100, kv=10, h=100, mu=2.0, bo=1.2, L=2000,
+                        reh=1500, rw=0.328, s=0, p_res=3000, pb=3000, angle=90)
     assert c[0].shape == (20,)

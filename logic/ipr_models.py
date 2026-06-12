@@ -56,7 +56,7 @@ class IPRModels:
 
         Ec. 2-54 (MODULO II p. 56):
             q = C · (Pr² - Pwf²)^n
-        ``n`` varía entre 0.5 y 1; ``C`` en unidades de campo Mscf/d/psi²ⁿ
+        ``n`` varía entre 0.5 y 1; ``C`` en unidades de campo MMscf/d/psi²ⁿ
         (gas) o STB/d/psi²ⁿ (aceite).
 
         Ref: DOCS/MODULO II - DESEMPEÑO DEL YACIMIENTO_unlocked.pdf, pp. 55-58.
@@ -102,7 +102,12 @@ class IPRModels:
     # ================= NUEVOS MODELOS VERTICALES =================
 
     @staticmethod
-    def economides_retnanto(q_max, p_res, pb, steps=20):
+    def economides_retnanto(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+                            pi_source="joshi",
+                            kx=None, ky=None, kz=None,
+                            a_res=None, b_res=None,
+                            x_w=None, y_w=None, z_w=None,
+                            steps=20):
         """Correlación de Retnanto y Economides (1998) para IPR bifásico en pozos horizontales.
 
         Ec. 3-33: qo/qo,max = 1 - 0.25*(Pwf/Pr) - 0.75*(Pwf/Pr)^n
@@ -116,9 +121,22 @@ class IPRModels:
         """
         pwf_values = np.linspace(0, p_res, steps)
 
-        if pb <= 0 or p_res <= 0 or q_max <= 0:
+        if pb <= 0 or p_res <= 0:
             warnings.warn(
-                "Economides–Retnanto requiere Pr, Pb y q_max estrictamente positivos.",
+                "Economides–Retnanto requiere Pr y Pb estrictamente positivos.",
+                UserWarning, stacklevel=2,
+            )
+            return np.zeros(steps), pwf_values
+
+        q_max = IPRModels._calculate_qmax_horizontal(
+            kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+            pi_source=pi_source, kx=kx, ky=ky, kz=kz,
+            a_res=a_res, b_res=b_res, x_w=x_w, y_w=y_w, z_w=z_w
+        )
+
+        if q_max <= 0:
+            warnings.warn(
+                "Economides–Retnanto calculó un q_max menor o igual a cero.",
                 UserWarning, stacklevel=2,
             )
             return np.zeros(steps), pwf_values
@@ -153,6 +171,7 @@ class IPRModels:
             q_values.append(max(0.0, q))
         return np.array(q_values), pwf_values
 
+
     @staticmethod
     def vogel_subsaturado(p_res, pb, j_index, steps=20):
         """Vogel generalizado para reservorios subsaturados (Pr ≥ Pb).
@@ -181,25 +200,30 @@ class IPRModels:
         return np.array(q_values), pwf_values
 
     @staticmethod
-    def brown(q_max_o, p_res, w_cut, steps=20):
+    def brown(p_res, pb, j_index, w_cut, steps=20):
         """Brown — IPR de aceite + agua con corte de agua constante.
 
-        Aceite por Vogel saturado: qo = q_max_o·(1 - 0.2·(Pwf/Pr) - 0.8·(Pwf/Pr)²).
+        Aceite por Vogel subsaturado/saturado:
+        - Pwf >= Pb (monofásico): q = J·(Pr - Pwf)
+        - Pwf < Pb (bifásico):   q = qb + (J·Pb/1.8)·(1 - 0.2·(Pwf/Pb) - 0.8·(Pwf/Pb)²)
+          con qb = J·(Pr - Pb) si Pr > Pb else 0.
+
         Agua proporcional al corte: qw = (WC/(100-WC))·qo  → qt = qo + qw.
 
-        Asunción: el corte de agua se asume **constante** en toda la curva
-        (simplificación; en realidad WC varía con la presión). Para WC=20 %
-        cada punto cumple qt = qo·1.25.
-
-        Brown's Method no aparece en MODULO II ni MODULO III; modelo
-        propio del proyecto basado en la generalización clásica de Vogel
-        con WOR constante.
+        Ref: Wiggins, M. L. / Brown's Method generalizado a subsaturado de forma consistente.
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
+        
+        qb = j_index * (p_res - pb) if p_res > pb else 0.0
+        
         for pwf in pwf_values:
-            ratio = pwf / p_res
-            qo = q_max_o * (1 - 0.2 * ratio - 0.8 * (ratio ** 2))
+            if pwf >= pb:
+                qo = j_index * (p_res - pwf)
+            else:
+                ratio = pwf / pb if pb > 0 else 0
+                qo = qb + (j_index * pb / 1.8) * (1 - 0.2 * ratio - 0.8 * (ratio**2))
+            
             # Aproximación lineal para el agua basada en el water cut a Qmax
             qw = (w_cut / (100 - w_cut)) * qo if w_cut < 100 else 0
             q_values.append(max(0, qo + qw))
@@ -208,7 +232,12 @@ class IPRModels:
     # ================= NUEVOS MODELOS HORIZONTALES =================
 
     @staticmethod
-    def cheng(q_max, p_res, angle, steps=20):
+    def cheng(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb, angle,
+              pi_source="joshi",
+              kx=None, ky=None, kz=None,
+              a_res=None, b_res=None,
+              x_w=None, y_w=None, z_w=None,
+              steps=20):
         """Cheng (1990) — IPR para pozo desviado u horizontal (sec. 3.2.3).
 
         Ec. 3-32:  qo/qo,max = a0 + a1·(Pwf/Pr) - a2·(Pwf/Pr)²
@@ -223,6 +252,15 @@ class IPRModels:
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
+
+        q_max = IPRModels._calculate_qmax_horizontal(
+            kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+            pi_source=pi_source, kx=kx, ky=ky, kz=kz,
+            a_res=a_res, b_res=b_res, x_w=x_w, y_w=y_w, z_w=z_w
+        )
+
+        if q_max <= 0:
+            return np.zeros(steps), pwf_values
 
         # Tabla 3-1: Constantes de Cheng
         angles = np.array([0, 15, 30, 45, 60, 75, 85, 90])
@@ -463,6 +501,35 @@ class IPRModels:
             return 0.0
 
     @staticmethod
+    def _calculate_qmax_horizontal(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+                                   pi_source="joshi",
+                                   kx=None, ky=None, kz=None,
+                                   a_res=None, b_res=None,
+                                   x_w=None, y_w=None, z_w=None):
+        if pi_source == "helmy":
+            kx_ = kh if kx is None else kx
+            ky_ = kh if ky is None else ky
+            kz_ = kv if kz is None else kz
+            a_ = (2.0 * reh) if a_res is None else a_res
+            b_ = (2.0 * reh) if b_res is None else b_res
+            x_w_ = (b_ / 2.0) if x_w is None else x_w
+            y_w_ = (a_ / 2.0) if y_w is None else y_w
+            z_w_ = (h / 2.0) if z_w is None else z_w
+            j_index = IPRModels._pi_helmy_wattenbarger(
+                kx_, ky_, kz_, h, a_, b_, L, rw, x_w_, y_w_, z_w_, mu, bo
+            )
+        else:
+            j_index = IPRModels._pi_joshi(kh, kv, h, mu, bo, L, reh, rw, s)
+
+        if j_index <= 0:
+            return 0.0
+        
+        qo_max_below_pb = (j_index * pb) / 1.8 if pb > 0 else 0.0
+        qb = j_index * (p_res - pb) if p_res > pb else 0.0
+        q_max = qb + qo_max_below_pb
+        return q_max
+
+    @staticmethod
     def vogel_kabir(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
                     pi_source="joshi",
                     kx=None, ky=None, kz=None,
@@ -524,7 +591,12 @@ class IPRModels:
     # Se eliminaron Economides Horizontal, Butler y Furui de los modelos horizontales
 
     @staticmethod
-    def bendakhlia_aziz(q_max, p_res, rec_factor, steps=20):
+    def bendakhlia_aziz(kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb, rec_factor,
+                        pi_source="joshi",
+                        kx=None, ky=None, kz=None,
+                        a_res=None, b_res=None,
+                        x_w=None, y_w=None, z_w=None,
+                        steps=20):
         """Bendakhlia y Aziz — IPR bifásico horizontal con factor de recobro.
 
         Ec. 3-31:  qo/qo,max = [1 - V·(Pwf/Pr) - (1-V)·(Pwf/Pr)²]^n
@@ -537,6 +609,15 @@ class IPRModels:
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
+
+        q_max = IPRModels._calculate_qmax_horizontal(
+            kh, kv, h, mu, bo, L, reh, rw, s, p_res, pb,
+            pi_source=pi_source, kx=kx, ky=ky, kz=kz,
+            a_res=a_res, b_res=b_res, x_w=x_w, y_w=y_w, z_w=z_w
+        )
+
+        if q_max <= 0:
+            return np.zeros(steps), pwf_values
 
         # Calcular n y V a partir del factor de recobro
         x = rec_factor

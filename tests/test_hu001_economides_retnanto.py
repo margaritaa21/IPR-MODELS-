@@ -28,7 +28,13 @@ def _q_at_pwf(q_arr, pwf_arr, pwf_target):
 def test_ca1_pdf_reference_case_within_2pct():
     """CA-1: Pr=Pb=3814,7 ; Pwf=2214,7 ; qmax=42345,7 → q≈27473,9 STB/d."""
     q_arr, pwf_arr = IPRModels.economides_retnanto(
-        q_max=42345.7, p_res=3814.7, pb=3814.7, steps=400,
+        kh=100.0, kv=10.0, h=100.0, mu=1.095, bo=1.278,
+        L=1000.0, reh=1128.0, rw=0.25, s=0.0,
+        p_res=3814.7, pb=3814.7, pi_source="helmy",
+        kx=100.0, ky=100.0, kz=10.0,
+        a_res=2000.0, b_res=2000.0,
+        x_w=1000.0, y_w=1000.0, z_w=50.0,
+        steps=400,
     )
     q_at_pwf = _q_at_pwf(q_arr, pwf_arr, 2214.7)
     assert q_at_pwf == pytest.approx(27473.9, rel=0.02), (
@@ -48,15 +54,18 @@ def test_ca1_n_param_matches_pdf():
 def test_ca2_curve_between_vogel_and_bendakhlia():
     """CA-2: A Pwf = 2214,7, q_Economides ∈ [q_Vogel, q_Bendakhlia]
     para los inputs saturados del ejemplo PDF."""
-    inputs = dict(p_res=3814.7, pb=3814.7, steps=400)
+    qmax_inputs = dict(
+        kh=100.0, kv=10.0, h=100.0, mu=1.095, bo=1.278,
+        L=1000.0, reh=1128.0, rw=0.25, s=0.0,
+        p_res=3814.7, pb=3814.7, pi_source="helmy",
+        kx=100.0, ky=100.0, kz=10.0,
+        a_res=2000.0, b_res=2000.0,
+        x_w=1000.0, y_w=1000.0, z_w=50.0,
+        steps=400
+    )
 
-    # qo,max = 42345,7 STB/d común, ratios del PDF (Tabla 3-5):
-    #   Vogel-Modificado  : 26010,3
-    #   Bendakhlia y Aziz : 27579,8
-    #   Retnanto-Economides: 27473,9
-    q_er, pwf_er = IPRModels.economides_retnanto(q_max=42345.7, **inputs)
-    q_ba, pwf_ba = IPRModels.bendakhlia_aziz(q_max=42345.7, p_res=3814.7,
-                                             rec_factor=0.05, steps=400)
+    q_er, pwf_er = IPRModels.economides_retnanto(**qmax_inputs)
+    q_ba, pwf_ba = IPRModels.bendakhlia_aziz(rec_factor=0.05, **qmax_inputs)
     q_er_v = _q_at_pwf(q_er, pwf_er, 2214.7)
     q_ba_v = _q_at_pwf(q_ba, pwf_ba, 2214.7)
 
@@ -75,7 +84,8 @@ def test_ca3_warning_out_of_range_when_pr_gt_pb():
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", UserWarning)
         q_arr, pwf_arr = IPRModels.economides_retnanto(
-            q_max=1500.0, p_res=4000.0, pb=3000.0, steps=20,
+            kh=100.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0,
+            reh=1500.0, rw=0.328, s=0.0, p_res=4000.0, pb=3000.0, steps=20,
         )
 
     messages = [str(w.message) for w in caught
@@ -87,11 +97,12 @@ def test_ca3_warning_out_of_range_when_pr_gt_pb():
 
 
 def test_ca4_default_ui_inputs_no_nan_no_inf():
-    """CA-4: Defaults de UI (Pr=4000, Pb=3000, qmax=1500) → sin NaN/inf."""
+    """CA-4: Defaults de UI (Pr=4000, Pb=3000) → sin NaN/inf."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         q_arr, pwf_arr = IPRModels.economides_retnanto(
-            q_max=1500.0, p_res=4000.0, pb=3000.0, steps=50,
+            kh=100.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0,
+            reh=1500.0, rw=0.328, s=0.0, p_res=4000.0, pb=3000.0, steps=50,
         )
     assert not np.any(np.isnan(q_arr)), "La curva contiene NaN"
     assert not np.any(np.isinf(q_arr)), "La curva contiene inf"
@@ -99,11 +110,11 @@ def test_ca4_default_ui_inputs_no_nan_no_inf():
 
 
 def test_invalid_inputs_return_zero_array():
-    """pb<=0 / q_max<=0 / p_res<=0 → arrays cero + warning."""
+    """pb<=0 / J<=0 / p_res<=0 → arrays cero + warning."""
     for kwargs in [
-        dict(q_max=1500.0, p_res=4000.0, pb=0.0),
-        dict(q_max=0.0, p_res=4000.0, pb=3000.0),
-        dict(q_max=1500.0, p_res=0.0, pb=3000.0),
+        dict(kh=100.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0, reh=1500.0, rw=0.328, s=0.0, p_res=4000.0, pb=0.0),
+        dict(kh=0.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0, reh=1500.0, rw=0.328, s=0.0, p_res=4000.0, pb=3000.0),
+        dict(kh=100.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0, reh=1500.0, rw=0.328, s=0.0, p_res=0.0, pb=3000.0),
     ]:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always", UserWarning)
@@ -111,3 +122,4 @@ def test_invalid_inputs_return_zero_array():
         assert np.all(q_arr == 0), f"Esperado ceros para inputs {kwargs}"
         assert any(issubclass(w.category, UserWarning) for w in caught), \
             f"Esperado warning para inputs {kwargs}"
+

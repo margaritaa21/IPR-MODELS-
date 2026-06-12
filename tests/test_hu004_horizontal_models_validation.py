@@ -71,7 +71,15 @@ def test_ca3_babu_odeh_runs_without_exception():
 # ── CA-4 — Cheng validado contra Ec. 3-32 canónica ──────────────────────────
 def test_ca4_cheng_matches_canonical_equation():
     """Cheng @ 90° reproduce Ec. 3-32 con coeficientes Tabla 3-1 byte-a-byte."""
-    q, p = IPRModels.cheng(q_max=QOMAX_PDF, p_res=PR, angle=90, steps=400)
+    q, p = IPRModels.cheng(
+        kh=100.0, kv=10.0, h=100.0, mu=1.095, bo=1.278,
+        L=1000.0, reh=1128.0, rw=0.25, s=0.0,
+        p_res=PR, pb=PB, angle=90, pi_source="helmy",
+        kx=100.0, ky=100.0, kz=10.0,
+        a_res=2000.0, b_res=2000.0,
+        x_w=1000.0, y_w=1000.0, z_w=50.0,
+        steps=400
+    )
     q_code = _q_at(q, p, PWF_TEST)
 
     # Fórmula canónica Ec. 3-32 + Tabla 3-1 fila 90° (a0=0,9885, a1=-0,2055, a2=1,1818)
@@ -93,7 +101,13 @@ def test_ca4_cheng_matches_canonical_equation():
 def test_ca5_bendakhlia_aziz_within_5pct_of_pdf():
     """Bendakhlia-Aziz con rec_factor=0,05 entrega q(Pwf=2214,7) ≈ 27 580 STB/d (±5 %)."""
     q, p = IPRModels.bendakhlia_aziz(
-        q_max=QOMAX_PDF, p_res=PR, rec_factor=0.05, steps=400,
+        kh=100.0, kv=10.0, h=100.0, mu=1.095, bo=1.278,
+        L=1000.0, reh=1128.0, rw=0.25, s=0.0,
+        p_res=PR, pb=PB, rec_factor=0.05, pi_source="helmy",
+        kx=100.0, ky=100.0, kz=10.0,
+        a_res=2000.0, b_res=2000.0,
+        x_w=1000.0, y_w=1000.0, z_w=50.0,
+        steps=400
     )
     q_code = _q_at(q, p, PWF_TEST)
     assert q_code == pytest.approx(27579.8, rel=0.05), (
@@ -128,9 +142,17 @@ def test_docstrings_cite_documentation_reference():
 ])
 def test_cheng_table_3_1_coefficients(angle, a0, a1, a2):
     """Tabla 3-1 (Cheng) bien transcrita: q(Pwf=Pr/2) coincide con cálculo manual."""
-    q, p = IPRModels.cheng(q_max=1000.0, p_res=3000.0, angle=angle, steps=400)
+    q, p = IPRModels.cheng(
+        kh=100.0, kv=10.0, h=100.0, mu=2.0, bo=1.2, L=2000.0,
+        reh=1500.0, rw=0.328, s=0.0, p_res=3000.0, pb=3000.0, angle=angle, steps=400
+    )
     pwf = 1500.0
     q_at_pwf = _q_at(q, p, pwf)
     r = 0.5
-    expected = 1000.0 * (a0 + a1 * r - a2 * r ** 2)
+    
+    # Calcular q_max esperado
+    j = IPRModels._pi_joshi(100.0, 10.0, 100.0, 2.0, 1.2, 2000.0, 1500.0, 0.328, 0.0)
+    q_max = j * 3000.0 / 1.8
+    
+    expected = q_max * (a0 + a1 * r - a2 * r ** 2)
     assert q_at_pwf == pytest.approx(expected, rel=1e-3)
