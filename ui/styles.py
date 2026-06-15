@@ -129,7 +129,7 @@ class VioletTheme:
         style.configure(".", 
                         background=c["BG_COLOR"], 
                         foreground=c["TEXT_COLOR"], 
-                        font=(cls.FONT_FAMILY, 10))
+                        font=(cls.FONT_FAMILY, 11))
         
         # Notebook (Pestañas)
         style.configure("TNotebook", background=c["BG_COLOR"], borderwidth=0)
@@ -137,7 +137,7 @@ class VioletTheme:
                         background=c["HEADER_COLOR"], 
                         foreground="#A0A0A0" if cls._mode == "dark" else "#7D6890", 
                         padding=(20, 8),
-                        font=(cls.FONT_FAMILY, 10, "bold"),
+                        font=(cls.FONT_FAMILY, 11, "bold"),
                         borderwidth=0)
         style.map("TNotebook.Tab",
                   background=[("selected", c["BTN_COLOR"])],
@@ -147,7 +147,7 @@ class VioletTheme:
         style.configure("TButton", 
                         background=c["BTN_COLOR"], 
                         foreground="white", 
-                        font=(cls.FONT_FAMILY, 10, "bold"),
+                        font=(cls.FONT_FAMILY, 11, "bold"),
                         borderwidth=0,
                         padding=(12, 6))
         style.map("TButton",
@@ -159,7 +159,7 @@ class VioletTheme:
         style.configure("TLabel", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"])
         style.configure("Panel.TLabel", background=c["FRAME_BG"], foreground=c["TEXT_COLOR"])
         style.configure("TLabelframe", background=c["BG_COLOR"], foreground=c["TEXT_COLOR"], bordercolor=c["BORDER"], borderwidth=1, relief="solid")
-        style.configure("TLabelframe.Label", background=c["BG_COLOR"], foreground=c["PRIMARY"], font=(cls.FONT_FAMILY, 10, "bold"))
+        style.configure("TLabelframe.Label", background=c["BG_COLOR"], foreground=c["PRIMARY"], font=(cls.FONT_FAMILY, 11, "bold"))
         
         # Entry (Padding and border color in Clam theme)
         style.configure("TEntry", 
@@ -189,8 +189,8 @@ class VioletTheme:
                         background=c["ENTRY_BG"], 
                         foreground=c["TEXT_COLOR"], 
                         fieldbackground=c["ENTRY_BG"], 
-                        rowheight=26,
-                        font=(cls.FONT_FAMILY, 9),
+                        rowheight=28,
+                        font=(cls.FONT_FAMILY, 10),
                         borderwidth=0)
         style.map("Treeview", 
                   background=[("selected", c["BTN_COLOR"])], 
@@ -199,7 +199,7 @@ class VioletTheme:
         style.configure("Treeview.Heading", 
                         background=c["HEADER_COLOR"], 
                         foreground="white", 
-                        font=(cls.FONT_FAMILY, 9, "bold"),
+                        font=(cls.FONT_FAMILY, 10, "bold"),
                         padding=6,
                         borderwidth=1,
                         bordercolor=c["BORDER"])

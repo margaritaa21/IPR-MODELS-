@@ -44,16 +44,16 @@ class GraphWidget(ttk.Frame):
             "", xy=(0,0), xytext=(15, 15), textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.6", fc=c["BTN_COLOR"], ec=c["TEXT_COLOR"], lw=1.5, alpha=0.95),
             arrowprops=dict(arrowstyle="wedge,tail_width=0.7", fc=c["BTN_COLOR"], ec=c["TEXT_COLOR"], patchA=None, patchB=None, relpos=(0.2, 0.2)),
-            color="#FFFFFF", weight="bold", fontsize=9, fontname="Segoe UI"
+            color="#FFFFFF", weight="bold", fontsize=10, fontname="Segoe UI"
         )
         self.annot.set_visible(False)
         self.canvas.mpl_connect("motion_notify_event", self.on_hover)
 
     def set_labels(self, xlabel, ylabel, title):
         c = VioletTheme.get_colors()
-        self.ax.set_xlabel(xlabel, fontsize=9, fontname="Segoe UI", color=c["TEXT_COLOR"])
-        self.ax.set_ylabel(ylabel, fontsize=9, fontname="Segoe UI", color=c["TEXT_COLOR"])
-        self.ax.set_title(title, fontsize=11, fontname="Segoe UI", weight='bold', color=c["TEXT_COLOR"])
+        self.ax.set_xlabel(xlabel, fontsize=10, fontname="Segoe UI", color=c["TEXT_COLOR"])
+        self.ax.set_ylabel(ylabel, fontsize=10, fontname="Segoe UI", color=c["TEXT_COLOR"])
+        self.ax.set_title(title, fontsize=12, fontname="Segoe UI", weight='bold', color=c["TEXT_COLOR"])
         self.ax.grid(True, linestyle='--', alpha=0.3, color=c["TEXT_COLOR"])
 
     def plot_curve(self, x, y, label, color, clear=False, xlabel="Caudal Q [STB/d]", ylabel="Pwf [psi]", title="Análisis Nodal"):
@@ -66,7 +66,7 @@ class GraphWidget(ttk.Frame):
                 "", xy=(0,0), xytext=(15, 15), textcoords="offset points",
                 bbox=dict(boxstyle="round,pad=0.6", fc=c["BTN_COLOR"], ec=c["TEXT_COLOR"], lw=1.5, alpha=0.95),
                 arrowprops=dict(arrowstyle="wedge,tail_width=0.7", fc=c["BTN_COLOR"], ec=c["TEXT_COLOR"], patchA=None, patchB=None, relpos=(0.2, 0.2)),
-                color="#FFFFFF", weight="bold", fontsize=9, fontname="Segoe UI"
+                color="#FFFFFF", weight="bold", fontsize=10, fontname="Segoe UI"
             )
             self.annot.set_visible(False)
             

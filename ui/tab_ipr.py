@@ -19,13 +19,35 @@ class IPRTab(ttk.Frame):
         left_panel = tk.Frame(self, bg=c["BG_COLOR"], width=320)
         left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         left_panel.pack_propagate(False) # Forzar ancho fijo
+        
+        # Canvas y Scrollbar para hacer scroll en inputs
+        canvas = tk.Canvas(left_panel, bg=c["BG_COLOR"], width=300, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(left_panel, orient="vertical", command=canvas.yview, style="Vertical.TScrollbar")
+        self.scroll_frame = ttk.Frame(canvas)
+        
+        # Vincular cambio de tamaño de scroll_frame al scrollregion del canvas
+        self.scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Vincular rueda del mouse
+        def _bind_mouse(event):
+            canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+        def _unbind_mouse(event):
+            canvas.unbind_all("<MouseWheel>")
+            
+        canvas.bind("<Enter>", _bind_mouse)
+        canvas.bind("<Leave>", _unbind_mouse)
 
         # --- PANEL DERECHO (PanedWindow) ---
         right_panel = ttk.PanedWindow(self, orient=tk.VERTICAL)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # --- PANEL IZQUIERDO: SELECCIÓN DE MODELO ---
-        lbl_frame_model = ttk.LabelFrame(left_panel, text="Selección de Modelo", padding=10)
+        lbl_frame_model = ttk.LabelFrame(self.scroll_frame, text="Selección de Modelo", padding=10)
         lbl_frame_model.pack(fill=tk.X, padx=5, pady=5)
 
         ttk.Label(lbl_frame_model, text="Modelo IPR:").pack(anchor="w")
@@ -37,11 +59,11 @@ class IPRTab(ttk.Frame):
         self.modelo_cb.bind("<<ComboboxSelected>>", self.update_input_fields)
         
         # --- PANEL IZQUIERDO: INPUTS DINÁMICOS ---
-        self.input_frame = ttk.LabelFrame(left_panel, text="Parámetros de Entrada", padding=10)
+        self.input_frame = ttk.LabelFrame(self.scroll_frame, text="Parámetros de Entrada", padding=10)
         self.input_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Botón Calcular
-        btn_calc = ttk.Button(left_panel, text="Calcular Curva IPR", command=self.calculate)
+        btn_calc = ttk.Button(self.scroll_frame, text="Calcular Curva IPR", command=self.calculate)
         btn_calc.pack(fill=tk.X, padx=10, pady=20)
 
         # Panel Superior: Gráfica
@@ -134,6 +156,7 @@ class IPRTab(ttk.Frame):
             self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
             self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
             self.create_entry("Skin (s):", "skin", "0")
+            self.create_combobox("Método IP:", "pi_source", ["Joshi", "Helmy-Wattenbarger"], "Joshi")
         elif model == "Economides y Retnanto":
             self.create_entry("Presión Yac. (psi):", "pres", "4000")
             self.create_entry("P Burbuja Pb (psi):", "pb", "3000")
@@ -146,6 +169,7 @@ class IPRTab(ttk.Frame):
             self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
             self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
             self.create_entry("Skin (s):", "skin", "0")
+            self.create_combobox("Método IP:", "pi_source", ["Joshi", "Helmy-Wattenbarger"], "Joshi")
         elif model == "Joshi Horizontal":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
             self.create_entry("Permeabilidad kH (md):", "kh", "100")
@@ -185,6 +209,7 @@ class IPRTab(ttk.Frame):
             self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
             self.create_entry("Radio rw (ft):", "rw", "0.328")
             self.create_entry("Skin (s):", "skin", "0")
+            self.create_combobox("Método IP:", "pi_source", ["Joshi", "Helmy-Wattenbarger"], "Joshi")
         elif model == "Bendakhlia y Aziz":
             self.create_entry("Presión Yac. (psi):", "pres", "3000")
             self.create_entry("P Burbuja Pb (psi):", "pb", "3000")
@@ -198,9 +223,25 @@ class IPRTab(ttk.Frame):
             self.create_entry("Radio Drenaje reH (ft):", "reh", "1500")
             self.create_entry("Radio Pozo rw (ft):", "rw", "0.328")
             self.create_entry("Skin (s):", "skin", "0")
+            self.create_combobox("Método IP:", "pi_source", ["Joshi", "Helmy-Wattenbarger"], "Joshi")
             
             # Botón para mostrar la regresión
             ttk.Button(self.input_frame, text="Ver Regresión (n y V)", command=self.show_nv_regression).pack(pady=10)
+            
+            # Contenedor para valores de n y V dinámicos de regresión
+            from ui.styles import VioletTheme
+            theme_colors = VioletTheme.get_colors()
+            self.lbl_nv_values = tk.Label(
+                self.input_frame, 
+                text="", 
+                bg=theme_colors["BG_COLOR"], 
+                fg=theme_colors["PRIMARY"], 
+                font=(VioletTheme.FONT_FAMILY, 11, "bold"),
+                justify=tk.LEFT
+            )
+            self.lbl_nv_values.pack(pady=5)
+            self.entries["rec_factor"].bind("<KeyRelease>", self.update_aziz_values)
+            self.update_aziz_values()
 
         # Notify VLP tab to update its fields and adjust headers based on fluid/language
         from ui.i18n import I18N
@@ -279,6 +320,18 @@ class IPRTab(ttk.Frame):
         toolbar.update()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+    def update_aziz_values(self, *args):
+        try:
+            x = float(self.entries["rec_factor"].get())
+            if x < 0.0: x = 0.0
+            if x > 0.14: x = 0.14
+            n = 98.395 * (x**2) - 13.587 * x + 1.35
+            v = 355651 * (x**6) - 297459 * (x**5) + 91175 * (x**4) - 12584 * (x**3) + 837.55 * (x**2) - 25.12 * x + 0.378
+            v = max(0.01, v)
+            self.lbl_nv_values.config(text=f"n (Regresión) = {n:.4f}\nV (Regresión) = {v:.4f}")
+        except Exception:
+            self.lbl_nv_values.config(text="n = N/A\nV = N/A")
+
     def create_entry(self, label_text, key, default_val):
         """Helper para crear filas de inputs."""
         from ui.styles import VioletTheme
@@ -304,6 +357,30 @@ class IPRTab(ttk.Frame):
         except (ValueError, KeyError):
             return 0.0
 
+    def create_combobox(self, label_text, key, values, default_val):
+        """Helper para crear filas de comboboxes."""
+        from ui.styles import VioletTheme
+        c = VioletTheme.get_colors()
+        
+        frame = tk.Frame(self.input_frame, bg=c["BG_COLOR"])
+        frame.pack(fill=tk.X, pady=2)
+        
+        lbl = tk.Label(frame, text=label_text, width=20, anchor="w", bg=c["BG_COLOR"], fg=c["TEXT_COLOR"])
+        lbl.pack(side=tk.LEFT)
+        
+        cb = ttk.Combobox(frame, values=values, state="readonly")
+        cb.set(default_val)
+        cb.pack(side=tk.RIGHT, expand=True, fill=tk.X)
+        
+        self.entries[key] = cb
+
+    def get_string(self, key):
+        """Obtiene valor string de un widget (entry o combobox), maneja errores."""
+        try:
+            return self.entries[key].get()
+        except KeyError:
+            return ""
+
     def calculate(self):
         try:
             # Limpiar gráfica y tabla previa
@@ -321,13 +398,15 @@ class IPRTab(ttk.Frame):
                 q_res, p_res = IPRModels.darcy(self.get_float("k"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("re"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"))
             elif model == "Economides y Retnanto":
                 import warnings as _warnings
+                pi_src = "helmy" if self.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 with _warnings.catch_warnings(record=True) as caught:
                     _warnings.simplefilter("always", UserWarning)
                     q_res, p_res = IPRModels.economides_retnanto(
                         self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
                         self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
                         self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
-                        self.get_float("pres"), self.get_float("pb")
+                        self.get_float("pres"), self.get_float("pb"),
+                        pi_source=pi_src
                     )
                 for w in caught:
                     if issubclass(w.category, UserWarning):
@@ -340,24 +419,29 @@ class IPRTab(ttk.Frame):
                     self.get_float("j_index"), self.get_float("w_cut")
                 )
             elif model == "Cheng":
+                pi_src = "helmy" if self.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 q_res, p_res = IPRModels.cheng(
                     self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
                     self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
                     self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
-                    self.get_float("pres"), self.get_float("pb"), self.get_float("angle")
+                    self.get_float("pres"), self.get_float("pb"), self.get_float("angle"),
+                    pi_source=pi_src
                 )
             elif model == "Joshi Horizontal":
                 q_res, p_res = IPRModels.joshi(self.get_float("kh"), self.get_float("kv"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("reh"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"))
             elif model == "Babu y Odeh":
                 q_res, p_res = IPRModels.babu_odeh(self.get_float("kx"), self.get_float("ky"), self.get_float("kz"), self.get_float("h"), self.get_float("a_res"), self.get_float("b_res"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("rw"), self.get_float("x_mid"), self.get_float("y_0"), self.get_float("z_0"), self.get_float("s_res"), self.get_float("pres"))
             elif model == "Vogel Modificado (Kabir)":
-                q_res, p_res = IPRModels.vogel_kabir(self.get_float("kh"), self.get_float("kv"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("reh"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"), self.get_float("pb"))
+                pi_src = "helmy" if self.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
+                q_res, p_res = IPRModels.vogel_kabir(self.get_float("kh"), self.get_float("kv"), self.get_float("h"), self.get_float("mu"), self.get_float("bo"), self.get_float("L"), self.get_float("reh"), self.get_float("rw"), self.get_float("skin"), self.get_float("pres"), self.get_float("pb"), pi_source=pi_src)
             elif model == "Bendakhlia y Aziz":
+                pi_src = "helmy" if self.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 q_res, p_res = IPRModels.bendakhlia_aziz(
                     self.get_float("kh"), self.get_float("kv"), self.get_float("h"),
                     self.get_float("mu"), self.get_float("bo"), self.get_float("L"),
                     self.get_float("reh"), self.get_float("rw"), self.get_float("skin"),
-                    self.get_float("pres"), self.get_float("pb"), self.get_float("rec_factor")
+                    self.get_float("pres"), self.get_float("pb"), self.get_float("rec_factor"),
+                    pi_source=pi_src
                 )
 
             # Graficar — paleta unificada de la HU-006 (pasteles morados).

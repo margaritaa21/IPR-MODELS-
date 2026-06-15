@@ -32,7 +32,7 @@ class MainWindow(tk.Tk):
             text="🛢️ " + I18N.get("title"),
             bg=c["HEADER_COLOR"],
             fg="white",
-            font=(VioletTheme.FONT_FAMILY, 16, "bold")
+            font=(VioletTheme.FONT_FAMILY, 18, "bold")
         ).pack(side=tk.LEFT)
 
         # Global Well Type Selection
@@ -56,7 +56,7 @@ class MainWindow(tk.Tk):
             text=I18N.get("well_type"),
             bg=c["HEADER_COLOR"],
             fg="white",
-            font=(VioletTheme.FONT_FAMILY, 10, "bold")
+            font=(VioletTheme.FONT_FAMILY, 11, "bold")
         ).pack(side=tk.LEFT, padx=5)
         
         self.well_type_cb = ttk.Combobox(

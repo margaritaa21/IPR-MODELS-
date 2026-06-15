@@ -36,6 +36,15 @@ class VLPTab(ttk.Frame):
         
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Vincular rueda del mouse
+        def _bind_mouse(event):
+            canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+        def _unbind_mouse(event):
+            canvas.unbind_all("<MouseWheel>")
+            
+        canvas.bind("<Enter>", _bind_mouse)
+        canvas.bind("<Leave>", _unbind_mouse)
 
         # --- SECCIONES DE INPUTS ---
         self.geom_frame = ttk.LabelFrame(self.scroll_frame, text=I18N.get("geom"), padding=10)
@@ -234,11 +243,13 @@ class VLPTab(ttk.Frame):
             elif "Darcy" in model:
                 q_ipr, p_ipr = IPRModels.darcy(self.ipr_tab.get_float("k"), self.ipr_tab.get_float("h"), self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("re"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"), pres_res)
             elif model == "Economides y Retnanto":
+                pi_src = "helmy" if self.ipr_tab.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 q_ipr, p_ipr = IPRModels.economides_retnanto(
                     self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"),
                     self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"),
                     self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"),
-                    pres_res, self.ipr_tab.get_float("pb")
+                    pres_res, self.ipr_tab.get_float("pb"),
+                    pi_source=pi_src
                 )
             elif model == "Brown":
                 q_ipr, p_ipr = IPRModels.brown(
@@ -246,24 +257,29 @@ class VLPTab(ttk.Frame):
                     self.ipr_tab.get_float("j_index"), self.ipr_tab.get_float("w_cut")
                 )
             elif model == "Cheng":
+                pi_src = "helmy" if self.ipr_tab.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 q_ipr, p_ipr = IPRModels.cheng(
                     self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"),
                     self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"),
                     self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"),
-                    pres_res, self.ipr_tab.get_float("pb"), self.ipr_tab.get_float("angle")
+                    pres_res, self.ipr_tab.get_float("pb"), self.ipr_tab.get_float("angle"),
+                    pi_source=pi_src
                 )
             elif model == "Joshi Horizontal":
                 q_ipr, p_ipr = IPRModels.joshi(self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"), self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"), self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"), pres_res)
             elif model == "Babu y Odeh":
                 q_ipr, p_ipr = IPRModels.babu_odeh(self.ipr_tab.get_float("kx"), self.ipr_tab.get_float("ky"), self.ipr_tab.get_float("kz"), self.ipr_tab.get_float("h"), self.ipr_tab.get_float("a_res"), self.ipr_tab.get_float("b_res"), self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("x_mid"), self.ipr_tab.get_float("y_0"), self.ipr_tab.get_float("z_0"), self.ipr_tab.get_float("s_res"), pres_res)
             elif model == "Vogel Modificado (Kabir)":
-                q_ipr, p_ipr = IPRModels.vogel_kabir(self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"), self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"), self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"), pres_res, self.ipr_tab.get_float("pb"))
+                pi_src = "helmy" if self.ipr_tab.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
+                q_ipr, p_ipr = IPRModels.vogel_kabir(self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"), self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"), self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"), pres_res, self.ipr_tab.get_float("pb"), pi_source=pi_src)
             elif model == "Bendakhlia y Aziz":
+                pi_src = "helmy" if self.ipr_tab.get_string("pi_source") == "Helmy-Wattenbarger" else "joshi"
                 q_ipr, p_ipr = IPRModels.bendakhlia_aziz(
                     self.ipr_tab.get_float("kh"), self.ipr_tab.get_float("kv"), self.ipr_tab.get_float("h"),
                     self.ipr_tab.get_float("mu"), self.ipr_tab.get_float("bo"), self.ipr_tab.get_float("L"),
                     self.ipr_tab.get_float("reh"), self.ipr_tab.get_float("rw"), self.ipr_tab.get_float("skin"),
-                    pres_res, self.ipr_tab.get_float("pb"), self.ipr_tab.get_float("rec_factor")
+                    pres_res, self.ipr_tab.get_float("pb"), self.ipr_tab.get_float("rec_factor"),
+                    pi_source=pi_src
                 )
 
             if 'q_max_ipr' not in locals():
