@@ -69,6 +69,17 @@ class MainWindow(tk.Tk):
         self.well_type_cb.pack(side=tk.LEFT)
         self.well_type_cb.bind("<<ComboboxSelected>>", self.on_well_type_changed)
 
+        # Footer
+        footer = tk.Frame(self, bg=c["BG_COLOR"])
+        footer.pack(fill=tk.X, side=tk.BOTTOM)
+        tk.Label(
+            footer, 
+            text="By: Tania", 
+            font=(VioletTheme.FONT_FAMILY, 8, "italic"), 
+            bg=c["BG_COLOR"], 
+            fg="gray"
+        ).pack(side=tk.RIGHT, padx=10, pady=2)
+
         # Notebook
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)

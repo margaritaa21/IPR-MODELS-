@@ -245,10 +245,11 @@ class IPRModels:
         inclinación (0° = vertical, 90° = horizontal).
 
         Ref: DOCS/MODULO III - IPR DE POZOS HORIZONTALES, pp. 18-21
-        (Tabla 3-1). Nota: el ejemplo del PDF p. 34 contiene una incoherencia
-        interna (sustituye a1 con signo invertido y entrega un resultado
-        numérico no reproducible por la propia fórmula); esta implementación
-        respeta la Ec. 3-32 canónica con los signos de Tabla 3-1.
+        (Tabla 3-1). Nota: el ejemplo del PDF p. 34 corrige el signo de a1 
+        respecto a una posible errata en la Ec. 3-32. La ecuación físicamente
+        correcta para cumplir Q=0 en Pwf=Pr (como en Vogel, donde a1=0.2 
+        y la ecuación es 1 - 0.2x - 0.8x²) asume la forma:
+        qo/qo,max = a0 - a1·(Pwf/Pr) - a2·(Pwf/Pr)².
         """
         pwf_values = np.linspace(0, p_res, steps)
         q_values = []
@@ -274,7 +275,7 @@ class IPRModels:
         
         for pwf in pwf_values:
             ratio = pwf / p_res if p_res > 0 else 0
-            q = q_max * (a0 + a1 * ratio - a2 * (ratio ** 2))
+            q = q_max * (a0 - a1 * ratio - a2 * (ratio ** 2))
             q_values.append(max(0, q))
         return np.array(q_values), pwf_values
 
